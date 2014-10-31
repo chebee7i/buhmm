@@ -1,0 +1,171 @@
+Consolidation/Reorganization
+----------------------------
+There are four layers of nesting of classes, which made maintenance and
+extending some what harder. Many methods were repeated 3 times, in 3 different
+classes. PathCountsEM is just a function now and all its functionality was
+moved into DirichletDistribution.  Many functions that were on InferEM are
+now only available on DirichletDistribution.  The "rule" was...if
+ModelComparison didn't need it, and it didn't have to do with
+machine iteration/construction/sampling, then it stayed on Dirichlet only.
+
+Naming conventions
+------------------
+Typical pairs are:
+    initial/final
+    start/finish
+    first/last
+    head/tail
+    begin/end
+
+Current code used:
+    start/last
+which mixes two common pairings.
+
+Changed to:
+    initial/final
+as this is more common in computer science literature.
+
+Also, use "node" instead of "state". Node used more in graph theory. State is
+used more in finite state automata. Tough choice. Since CMPy uses NetworkX,
+which uses "node", CMPy uses "node". Went with "node".
+
+
+DirichletDistribution
+    def __init__(self, machine, data=None, state_path=False):
+        pass
+
+    def _generate_uniform_alphas(self):
+        pass
+
+    def generate_sample(self, startNode, prng=None):
+        pass
+
+    def get_edges(self):
+        pass
+
+    def get_edge_alpha(self, startNode, edge):
+        pass
+
+    def get_edge_count(self, startNode, edge):
+
+    def get_PM_machine(self, startNode):
+
+    def get_nodes(self):
+
+    def get_node_alpha(self, startNode, node):
+
+    def get_node_count(self, startNode, node):
+
+    def get_possible_start_nodes(self):
+
+    def get_state_path(self, startNode):
+
+    def get_last_node(self, startNode):
+
+    def log_evidence_start_node(self, startNode):
+
+    def mean_edge_probability(self, startNode, edge):
+
+    def set_edge_alpha(self, edge, value):
+
+    def summary_string(self):
+
+    def clear_word_counts():
+
+    def generate_counts()
+
+    def add_counts_from()
+
+    def generate_ntm()
+
+    def generate_uhmm()
+
+    def generate_ltm()
+
+
+    final_node_prior() # just returns initial_node_prior()
+    final_node_posterior()
+    initial_node_posterior() # holds possible start nodes
+    initial_node_prior()
+
+
+class DirichletDistribution(object):
+
+    def _generate_uniform_alphas(self):
+
+    def edges():
+
+    def get_edge_alpha(self, initialNode, edge):
+
+    def get_edge_count(self, initialNode, edge):
+
+class Infer(object):
+
+    nNodes = None
+    nSymbols = None
+
+    def edges():
+        # No distinction between edges forced to be p=1 and those which aren't.
+        # Makes code a bit cleaner.
+
+    def final_ndist():
+        # Propagated from initial node posterior distribution
+        pass
+
+    def final_nodes():
+        # From each start node, independent of prior over nodes.
+        pass
+
+    def initial_ndist_posterior():
+        pass
+
+    def initial_ndist_prior()
+        pass
+
+    def is_compatible():
+        """
+        Returns `True` if the data is compatible with the model and prior.
+
+        The data is compatible with the model and prior (over initial nodes) if
+        the evidence (over model parameters and initial nodes) is nonzero.
+
+        Equivalently, there must exist at least one initial node with positive
+        probability (according to the prior over initial nodes), that is
+        capable of generating the data.
+
+        """
+
+    def log_evidence(inode=None):
+        # average over posterior initial ndist if inode is None
+        pass
+
+    def node_path(inode):
+        pass
+
+    def nodes():
+        pass
+
+    def pm_uhmms():
+        """
+        Returns the posterior mean uHMM for each initial node.
+
+        """
+        pass
+
+    # not necessary...use inital_ndist posterior
+    def sample_initial_node():
+        pass
+
+    def sample_ntm(inode=None):
+        # samples initial node if inode is None
+
+    def sample_uhmm(inode=None):
+        # samples initial node if inode is None
+
+    def sample_ltm(inode=None):
+        # samples initial node if inode is None
+
+    def summary():
+        pass
+
+class ModelComparison
