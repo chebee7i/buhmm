@@ -841,7 +841,7 @@ class Infer(object):
         base = 'e'
         ops = dit.math.LogOperations(base)
 
-        p_s = dit.copypmf(self.inode_posterior, base=base, mode='dense')
+        p_s = dit.copypmf(self.inode_prior, base=base, mode='dense')
         evidences = self.posterior.log_evidence_array()
         log_evid = ops.add_reduce(ops.mult(evidences, p_s))
 
