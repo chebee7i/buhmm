@@ -2,4 +2,5 @@ Cython
 iterutils
 numpy
 six
+nose2[coverage-plugin]
 
