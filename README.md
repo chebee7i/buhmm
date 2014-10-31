@@ -27,10 +27,10 @@ implementation written by Christopher C. Strelioff, which is part of `CMPy`,
 a Python package for computational mechanics.
 
 One of the primary goals goals for this package was to separate the core
-functionality from `CMPy`. Then, `CMPy` could internally provide a its
-own compatibility layer. This would enable other libraries and languages
-to make use of the inference algorithm, without having to commit to using
-`CMPy`. Another goal was to make it fairly low-level and more suitable for
-doing many inferences in large `for` loops. This is acheived, in part, through
-the use of [NumPy](http://www.numpy.org) arrays and [Cython](http://cython.org).
+functionality from `CMPy`. Then, `CMPy` could internally provide its own
+compatibility layer. This would enable other libraries and languages to make
+use of the inference algorithm, without having to commit to using `CMPy`.
+Another goal was to make it fairly low-level and more suitable for doing many
+inferences in large `for` loops. This is acheived, in part, through the use
+of [NumPy](http://www.numpy.org) arrays and [Cython](http://cython.org).
 
