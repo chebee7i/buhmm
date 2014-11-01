@@ -59,6 +59,8 @@ import cython
 import numpy as np
 #cimport numpy as np
 
+from copy import deepcopy
+
 from .counts import path_counts
 from .exceptions import InvalidInitialNode
 
@@ -196,9 +198,19 @@ class DirichletDistribution(object):
         This must be called any time `edge_alpha` or `edge_counts` is updated.
         They are used to calculate the evidence.
 
+        Practically, the node counts are the number of times each node was
+        visited by some symbol. Effectively:
+
+            node_count(initial_node, node)
+                = \sum_{symbol} edge_count(initialNode, node, symbol)
+
         """
         # axes: (initialNode, node)
         # Each element is the count/alpha value.
+
+        # Recall edge_counts and edge_alphas have:
+        # shape: (n, n, k)
+        # axes: (initialNode, node, symbol)
 
         # For the counts, if an edge was not traversed, then its count is
         # zero and will not affect the sum along axis=2. When we consider
@@ -209,6 +221,14 @@ class DirichletDistribution(object):
         # is 1, even for nodes which have no edges that need to be inferred.
         # However, this is not a problem since algorithms, like the evidence,
         # will not query for those alpha values (since they use self.edges).
+        #
+        # The reason it is done this way is to simplify the data structure.
+        # Technically, you only need priors for edges that are to be inferred.
+        # As of now, the implementation is that these arrays will have fixed
+        # size, no matter how many edges need to be inferred. An alternative
+        # way to do this is to make axis=1 sparse and with size equal to the
+        # number of edges to be inferred. We would then need to use a lookup to
+        # match indexes along axis=1 to the edges.
         if alpha:
             condition = self.tmatrix != -1
             self.node_alphas = np.where(condition, self.edge_alphas, 0).sum(axis=2)
@@ -412,7 +432,7 @@ class DirichletDistribution(object):
         trans /= (self.node_alphas[initial_node] + \
                   self.node_counts[initial_node])[:, np.newaxis]
 
-        # It is necessary to explicitly mark forbidden transitions are having
+        # It is necessary to explicitly mark forbidden transitions as having
         # zero probability since the alphas are nonzero for all transitions.
         condition = self.tmatrix == -1
         trans[condition] = 0
@@ -442,6 +462,30 @@ class DirichletDistribution(object):
             ntm[u, v] += trans[u, x]
 
         return ntm
+
+    def get_updated_dirichlet(self):
+        """
+        Returns a new DirichletDistribution that incorporates observed counts.
+
+        """
+        new = deepcopy(self)
+
+        # Transfer edge counts to edge alphas.
+        new.edge_alphas += new.edge_counts
+        new.edge_counts *= 0
+        new._update_node_alphacounts()
+
+        # The final nodes from the previous distribution are now the valid
+        # initial nodes. The new final nodes are equal to the valid initial
+        # nodes since no data has been passed in yet.
+        n = self.nNodes
+        initial_nodes = set(self.final_node)
+        vin = [i for i in range(n) if i in initial_nodes]
+        final_node = [i if i in initial_nodes else -1 for i in range(n)]
+        self.valid_initial_nodes = np.array(vin)
+        self.final_node = np.array(final_node)
+
+        return new
 
 class DirichletDistributionCP(DirichletDistribution):
     """
@@ -655,7 +699,8 @@ class Infer(object):
 
     # The final node distribution is a deterministic function of the initial
     # node posterior distribution. It is a "posterior". For the prior, the
-    # final node distribution would be equal to the initial node prior.
+    # fnode_prior would be equal to inode_prior, and so, we do not include it
+    # here.
     fnode_dist = None
 
     _nodedist_class = dit.ScalarDistribution
@@ -749,7 +794,9 @@ class Infer(object):
         # This averages over initial nodes. Recall, due to unifilarity, for any
         # given initial node, there is exact one final node.
         #
-        # p(s_f | x) = \sum_{s_i} p(s_f | x, s_i) p(s_i | x)
+        #   p(s_f | x) = \sum_{s_i} p(s_f | x, s_i) p(s_i | x)
+        #
+        # so p(s_f | x, s_i) is equal to 1.
         #
         ops = dit.math.LogOperations('e')
         pmf = np.zeros(self.posterior.nNodes, dtype=float)
@@ -826,7 +873,7 @@ class Infer(object):
         ----------
         initial_node : int, None
             An initial node. If `None`, then the expected log evidence is
-            returned, where the expectation is over the initial node posterior
+            returned, where the expectation is over the initial node prior
             distribution.
 
         Returns

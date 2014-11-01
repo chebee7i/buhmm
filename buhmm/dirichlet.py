@@ -9,6 +9,7 @@ the user work with standardized data or transition matrices.
 from __future__ import division
 
 from collections import OrderedDict, defaultdict
+from copy import deepcopy
 from itertools import product
 
 from . import _dirichlet
@@ -178,6 +179,45 @@ class DirichletDistribution(object):
 
     def _ntm(self, trans):
         return self._dd._ntm(trans)
+
+    def get_updated_dirichlet(self):
+        """
+        Returns a new DirichletDistribution that incorporates observed counts.
+
+        """
+        # We use deepcopy so that this works seamlessly with subclasses.
+
+        # Pull out the things we don't want deepcopied. Deepcopy and put back.
+        dd = self._dd
+        machine = self.machine
+        try:
+            self._dd = None
+            self.machine = None
+            new = deepcopy(self)
+        finally:
+            self._dd = dd
+            self.machine = machine
+
+        # Now update the new Dirichlet
+        new._dd = dd.get_updated_dirichlet()
+        new.machine = machine
+        new.prng = new._dd.prng
+
+        vin = [new.nodes[i] for i in new._dd.valid_initial_nodes]
+        new.valid_initial_nodes = vin
+
+        # We store the final nodes as a dictionary, instead of a list, so that
+        # we can handle arbitrary initial nodes. The Cython version uses a list
+        # and indexes with integers.
+        final = [new.nodes[i] if i != -1 else None for i in new._dd.final_node]
+        new.final_node = OrderedDict(zip(new.nodes, final))
+
+        new.nNodes = new._dd.nNodes
+        new.nSymbols = new._dd.nSymbols
+        new.nInitial = new._dd.nInitial
+        new.nEdges = new._dd.nEdges
+
+        return new
 
     # New methods
 
