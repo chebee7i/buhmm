@@ -112,7 +112,7 @@ class DirichletDistribution(object):
         updated, replaced, or new.
 
         """
-        vin = [nodes[i] for i in dirichlet._dd.valid_initial_nodes]
+        vin = [dirichlet.nodes[i] for i in dirichlet._dd.valid_initial_nodes]
         dirichlet.valid_initial_nodes = vin
 
         # We store the final nodes as a dictionary, instead of a list, so that
