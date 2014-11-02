@@ -102,21 +102,33 @@ class DirichletDistribution(object):
 
         dd = _dirichlet.DirichletDistribution
         self._dd = dd(delta, data, node_path, prng, out_arrays)
-        self.prng = self._dd.prng
 
-        vin = [nodes[i] for i in self._dd.valid_initial_nodes]
-        self.valid_initial_nodes = vin
+        self._post_init(self)
+
+    @staticmethod
+    def _post_init(dirichlet):
+        """
+        Post initialization once the Cython Dirichlet distribution is
+        updated, replaced, or new.
+
+        """
+        vin = [nodes[i] for i in dirichlet._dd.valid_initial_nodes]
+        dirichlet.valid_initial_nodes = vin
 
         # We store the final nodes as a dictionary, instead of a list, so that
         # we can handle arbitrary initial nodes. The Cython version uses a list
         # and indexes with integers.
-        final = [nodes[i] if i != -1 else None for i in self._dd.final_node]
-        self.final_node = OrderedDict(zip(nodes, final))
+        final = [dirichlet.nodes[i] if i != -1 else None
+                 for i in dirichlet._dd.final_node]
+        dirichlet.final_node = OrderedDict(zip(dirichlet.nodes, final))
 
-        self.nNodes = self._dd.nNodes
-        self.nSymbols = self._dd.nSymbols
-        self.nInitial = self._dd.nInitial
-        self.nEdges = self._dd.nEdges
+        # These are only needed when dirichlet._dd is new or replaced, but not
+        # when updated. But its quick either way, so we include it.
+        dirichlet.prng = dirichlet._dd.prng
+        dirichlet.nNodes = dirichlet._dd.nNodes
+        dirichlet.nSymbols = dirichlet._dd.nSymbols
+        dirichlet.nInitial = dirichlet._dd.nInitial
+        dirichlet.nEdges = dirichlet._dd.nEdges
 
     def _get_node_index(self, node):
         try:
@@ -153,11 +165,7 @@ class DirichletDistribution(object):
                 raise Exception(msg)
 
         self._dd.add_counts_from(data)
-
-        # Recalculate valid initial nodes.
-        final = [self.nodes[i] if i != -1 else None
-                 for i in self._dd.final_node]
-        self.final_node = OrderedDict(zip(self.nodes, final))
+        self._post_init(self)
 
     def log_evidence(self, initial_node):
         inode = self._get_node_index(initial_node)
@@ -201,21 +209,7 @@ class DirichletDistribution(object):
         # Now update the new Dirichlet
         new._dd = dd.get_updated_dirichlet()
         new.machine = machine
-        new.prng = new._dd.prng
-
-        vin = [new.nodes[i] for i in new._dd.valid_initial_nodes]
-        new.valid_initial_nodes = vin
-
-        # We store the final nodes as a dictionary, instead of a list, so that
-        # we can handle arbitrary initial nodes. The Cython version uses a list
-        # and indexes with integers.
-        final = [new.nodes[i] if i != -1 else None for i in new._dd.final_node]
-        new.final_node = OrderedDict(zip(new.nodes, final))
-
-        new.nNodes = new._dd.nNodes
-        new.nSymbols = new._dd.nSymbols
-        new.nInitial = new._dd.nInitial
-        new.nEdges = new._dd.nEdges
+        self._post_init(new)
 
         return new
 
@@ -379,7 +373,6 @@ class Infer(_dirichlet.Infer):
         #
         ops = dit.math.LogOperations('e')
         pmf = np.zeros(self.posterior.nNodes, dtype=float)
-
         for initial_node in self.posterior.valid_initial_nodes:
             p = self.inode_posterior[initial_node]
             final_node = self.posterior.final_node[initial_node]

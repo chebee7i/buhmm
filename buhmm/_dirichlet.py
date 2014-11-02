@@ -236,7 +236,10 @@ class DirichletDistribution(object):
             self.node_counts = self.edge_counts.sum(axis=2)
 
     def add_counts_from(self, data):
+        """
+        Adds additional counts from `data`.
 
+        """
         # For each symbol, add the count and update the final node.
         for symbol in data:
             for initial_node in self.valid_initial_nodes:
@@ -811,6 +814,15 @@ class Infer(object):
         d.make_sparse()
         self.fnode_dist = d
 
+    def add_counts_from(self, data):
+        """
+        Adds additional counts from `data`.
+
+        """
+        self.posterior.add_counts_from(data)
+        self._inode_init(self.inode_prior)
+        self._fnode_init()
+
     def pm_next_symbol_dist(self):
         # This averages over initial nodes.
         #
@@ -948,9 +960,6 @@ class Infer(object):
             uhmms = uhmms[0]
 
         return inodes, uhmms
-
-    def generate_uhmm(self, initial_node=None, size=None, prng=None):
-        pass
 
     # Depends on CMPy
 
