@@ -489,9 +489,9 @@ class ModelComparisonDistance(object):
     """
     def __init__(self, infers, distribution, distance=None):
         """
-        distribution is the true environment distribution
+        distribution is the true model's distribution
         distance is a measure of how close the inferred prediction is to the
-            true environment distribution.
+            true model's distribution.
 
         """
         if distance is None:

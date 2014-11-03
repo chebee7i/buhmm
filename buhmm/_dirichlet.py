@@ -262,7 +262,7 @@ class DirichletDistribution(object):
         Returns
         -------
         log_evid : float
-            The base-e log evidence of the data given the initial node. When
+            The base-2 log evidence of the data given the initial node. When
             its value is -inf, then it is not possible to generate the given
             data from the initial node. When its value is 0, then the given
             data is the only possible data that could be generated from the
@@ -318,7 +318,9 @@ class DirichletDistribution(object):
             temp[1] *= -1
             log_evid = temp.sum()
 
-        return log_evid
+        # Return base-2 logarithms.
+
+        return log_evid / np.log(2)
 
     def log_evidence_array(self):
         """
@@ -622,7 +624,7 @@ class DirichletDistributionCP(DirichletDistribution):
         Returns
         -------
         log_evid : float
-            The base-e log evidence of the data given the initial node. When
+            The base-2 log evidence of the data given the initial node. When
             its value is -inf, then it is not possible to generate the given
             data from the initial node. When its value is 0, then the given
             data is the only possible data that could be generated from the
@@ -637,7 +639,7 @@ class DirichletDistributionCP(DirichletDistribution):
                               for i in range(self.nMatrices)])
         log_evid = ops.mult_reduce(log_evids)
 
-        return log_evid
+        return log_evid / np.log(2)
 
     def sample_uhmm(self, initial_node, size=None, prng=None):
         """
@@ -943,7 +945,7 @@ class Infer(object):
         Returns
         -------
         log_evid : float
-            The base-e log evidence of the data.
+            The base-2 log evidence of the data.
 
         """
         if initial_node is not None:
@@ -956,7 +958,7 @@ class Infer(object):
         evidences = self.posterior.log_evidence_array()
         log_evid = ops.add_reduce(ops.mult(evidences, p_s))
 
-        return log_evid
+        return log_evid / np.log(2)
 
     def sample_uhmm(self, initial_node=None, size=None, prng=None):
         """
