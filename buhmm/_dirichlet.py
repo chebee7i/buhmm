@@ -480,15 +480,13 @@ class DirichletDistribution(object):
         new.edge_counts *= 0
         new._update_node_alphacounts()
 
-        # The final nodes from the previous distribution are now the valid
-        # initial nodes. The new final nodes are equal to the valid initial
-        # nodes since no data has been passed in yet.
-        n = self.nNodes
-        initial_nodes = set(self.final_node)
-        vin = [i for i in range(n) if i in initial_nodes]
-        final_node = [i if i in initial_nodes else -1 for i in range(n)]
-        new.valid_initial_nodes = np.array(vin)
-        new.final_node = np.array(final_node)
+        # To sample from the posterior, P( \theta | D, \sigma) we must keep the
+        # same valid_initial_nodes. Note that the edge counts are zero in the
+        # updated posterior. This suggests that the final_nodes should be
+        # equal to the valid_initial_nodes since there is no data (e.g. no
+        # edge counts). But doing this will not allow us to properly add new
+        # since we *must* know the final state from all data seen (even if
+        # the counts in the updated prior are now zero).
 
         return new
 
@@ -873,8 +871,14 @@ class Infer(object):
             self.posterior = posterior
 
         new.posterior = posterior.get_updated_prior()
-        new._inode_init(self.fnode_dist)
-        new._fnode_init()
+
+        # The difference here is that we must use the inode_posterior as our
+        # new initial distribution.
+        new._inode_init(self.inode_posterior)
+        # There is no need to reinit the fnode_dist since
+        # new.posterior.valid_initial_nodes and new.posterior.final_node are
+        # the same as in `self.posterior`.
+
         return new
 
     def pm_next_symbol_dist(self):
