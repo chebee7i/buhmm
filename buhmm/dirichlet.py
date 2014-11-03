@@ -28,6 +28,7 @@ __all__ = [
     'Infer',
     'InferCP',
     'ModelComparison',
+    'ModelComparisonPredictive',
 ]
 
 class DirichletDistribution(object):
@@ -458,12 +459,22 @@ class InferCP(Infer):
     _symboldist_class = dit.Distribution
     _posterior_class = DirichletDistributionCP
 
-class ModelComparison(object):
+class BaseModelComparison(object):
+    infers = None
+    model_dist = None
+
+    def sample_machine(self):
+        i = self.model_dist.rand()
+        return self.infers[i].sample_machine()
+
+class ModelComparison(BaseModelComparison):
     """
     Generally, this should only be used to compare Infer instances with the
     same amount of data, since evidences go more and more negative with length.
 
     """
+    log_evids = None
+
     def __init__(self, infers):
         self.infers = infers
 
@@ -479,14 +490,13 @@ class ModelComparison(object):
         d.set_base('linear') # Is this wise?
         self.model_dist = d
 
-    def sample_machine(self):
-        i = self.model_dist.rand()
-        return self.infers[i].sample_machine()
 
-class ModelComparisonDistance(object):
+class ModelComparisonDistance(ModelComparison):
     """
 
     """
+    distances = None
+
     def __init__(self, infers, distribution, distance=None):
         """
         distribution is the true model's distribution
@@ -528,6 +538,42 @@ class ModelComparisonDistance(object):
         d = dit.ScalarDistribution(pmf, base='linear')
         self.model_dist = d
 
-    def sample_machine(self):
-        i = self.model_dist.rand()
-        return self.infers[i].sample_machine()
+class ModelComparisonPredictive(ModelComparison):
+    """
+    Model Comparison using the posterior predictive distribution.
+
+    """
+    predictive_probabilities = None
+
+    def __init__(self, infers, test):
+        """
+        Parameters
+        ----------
+        infers : list
+            A list of Infer instances.
+        test : iterable
+            The posterior predictive test for each Infer instance.
+
+        """
+        self.infers = infers
+        d, probs = self.compare(test)
+        self.model_dist = d
+        self.predictive_probabilities = probs
+
+    def compare(self, test):
+        base = 2
+        ops = dit.math.get_ops(base)
+
+        pmf = np.array([i.predictive_probability(test) for i in self.infers])
+        predictive_probabilities = pmf.copy()
+        norm = ops.add_reduce(pmf)
+        if np.isinf(norm):
+            # If every model assigns probability zero to `test`, then we
+            # will treat all models as equally likely.
+            pmf = ops.log(np.array([1] * len(self.infers), dtype=float))
+        else:
+            ops.mult_inplace(pmf, ops.invert(norm))
+
+        d = dit.ScalarDistribution(pmf, base=base)
+        d.set_base('linear')
+        return d, predictive_probabilities
