@@ -469,14 +469,14 @@ class ModelComparison(object):
 
         self.log_evids = np.array([infer.log_evidence() for infer in infers])
 
-        base = 'e'
-        ops = dit.math.LogOperations(base)
+        base = 2
+        ops = dit.math.get_ops(base)
 
         logevid = ops.add_reduce(self.log_evids)
         norm = ops.invert(logevid)
         pmf = np.array([ops.mult(evid, norm) for evid in self.log_evids])
         d = dit.ScalarDistribution(pmf, base=base)
-        d.set_base('linear')
+        d.set_base('linear') # Is this wise?
         self.model_dist = d
 
     def sample_machine(self):

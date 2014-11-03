@@ -487,8 +487,8 @@ class DirichletDistribution(object):
         initial_nodes = set(self.final_node)
         vin = [i for i in range(n) if i in initial_nodes]
         final_node = [i if i in initial_nodes else -1 for i in range(n)]
-        self.valid_initial_nodes = np.array(vin)
-        self.final_node = np.array(final_node)
+        new.valid_initial_nodes = np.array(vin)
+        new.final_node = np.array(final_node)
 
         return new
 
@@ -631,15 +631,15 @@ class DirichletDistributionCP(DirichletDistribution):
             initial node.
 
         """
-        base = 'e'
-        ops = dit.math.LogOperations(base)
+        base = 2
+        ops = dit.math.get_ops(base)
 
         node = self.node_tuples[initial_node]
         log_evids = np.array([self.dd[i].log_evidence(node[i])
                               for i in range(self.nMatrices)])
         log_evid = ops.mult_reduce(log_evids)
 
-        return log_evid / np.log(2)
+        return log_evid
 
     def sample_uhmm(self, initial_node, size=None, prng=None):
         """
@@ -813,8 +813,8 @@ class Infer(object):
         #
         # where p(x) = \sum_s p(x|s) p(s)
         #
-        base = 'e'
-        ops = dit.math.LogOperations(base)
+        base = 2
+        ops = dit.math.get_ops(base)
 
         p_xgs = self.posterior.log_evidence_array()
         # Need to use dense version of the prior's pmf
@@ -825,7 +825,7 @@ class Infer(object):
 
         # No need to sort since the prior was already sorted.
         nodes = self.posterior.nodes
-        d = self._nodedist_class(nodes, p_sgx, base='e', sort=False)
+        d = self._nodedist_class(nodes, p_sgx, base=base, sort=False)
         d.set_base('linear')
         d.make_sparse()
         self.inode_posterior = d
@@ -873,7 +873,7 @@ class Infer(object):
             self.posterior = posterior
 
         new.posterior = posterior.get_updated_prior()
-        new._inode_init(new.inode_prior)
+        new._inode_init(self.fnode_dist)
         new._fnode_init()
         return new
 
@@ -951,14 +951,14 @@ class Infer(object):
         if initial_node is not None:
             return self.posterior.log_evidence(initial_node)
 
-        base = 'e'
-        ops = dit.math.LogOperations(base)
+        base = 2
+        ops = dit.math.get_ops(base)
 
         p_s = dit.copypmf(self.inode_prior, base=base, mode='dense')
         evidences = self.posterior.log_evidence_array()
         log_evid = ops.add_reduce(ops.mult(evidences, p_s))
 
-        return log_evid / np.log(2)
+        return log_evid
 
     def sample_uhmm(self, initial_node=None, size=None, prng=None):
         """
