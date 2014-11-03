@@ -188,7 +188,7 @@ class DirichletDistribution(object):
     def _ntm(self, trans):
         return self._dd._ntm(trans)
 
-    def get_updated_dirichlet(self):
+    def get_updated_prior(self):
         """
         Returns a new DirichletDistribution that incorporates observed counts.
 
@@ -207,7 +207,7 @@ class DirichletDistribution(object):
             self.machine = machine
 
         # Now update the new Dirichlet
-        new._dd = dd.get_updated_dirichlet()
+        new._dd = dd.get_updated_prior()
         new.machine = machine
         self._post_init(new)
 

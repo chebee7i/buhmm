@@ -404,7 +404,7 @@ class DirichletDistribution(object):
 
         Raises
         ------
-        Exception
+        InvalidInitialNode
             If `initial_node` is not a valid initial node.
 
         Notes
@@ -466,7 +466,7 @@ class DirichletDistribution(object):
 
         return ntm
 
-    def get_updated_dirichlet(self):
+    def get_updated_prior(self):
         """
         Returns a new DirichletDistribution that incorporates observed counts.
 
@@ -489,6 +489,39 @@ class DirichletDistribution(object):
         self.final_node = np.array(final_node)
 
         return new
+
+    def predictive_probability(self, x, initial_node):
+        """
+        Returns the mean predictive probability of `x` given `initial_node`.
+
+        That is, we calculate::
+
+            \Pr(x | D, \sigma) = \int \Pr( x | D, \theta, \sigma)
+                                      \Pr( \theta | D, \sigma) d \theta
+
+        This is a calculation from the posterior predictive distribution.
+
+        Parameters
+        ----------
+        x : iterable
+            The new data used to calculate the predictive probability.
+        initial_node : int
+            The initial node.
+
+        Returns
+        -------
+        p : float
+            The base-e logarithm of the mean predictive probability of `x`.
+
+        Raises
+        ------
+        InvalidInitialNode
+            If `initial_node` is not a valid initial node.
+
+        """
+        new = self.get_updated_prior()
+        new.add_counts_from(x)
+        return new.log_evidence(initial_node)
 
 class DirichletDistributionCP(DirichletDistribution):
     """
@@ -696,6 +729,8 @@ class Infer(object):
     New methods are those which require a distribution over start nodes.
 
     """
+    prng = None
+
     posterior = None
     inode_prior = None
     inode_posterior = None
@@ -822,6 +857,23 @@ class Infer(object):
         self.posterior.add_counts_from(data)
         self._inode_init(self.inode_prior)
         self._fnode_init()
+
+    def get_updated_prior(self):
+        """
+        Returns a new Infer that incorporates observed counts.
+
+        """
+        posterior = self.posterior
+        try:
+            self.posterior = None
+            new = deepcopy(self)
+        finally:
+            self.posterior = posterior
+
+        new.posterior = posterior.get_updated_prior()
+        new._inode_init(new.inode_prior)
+        new._fnode_init()
+        return new
 
     def pm_next_symbol_dist(self):
         # This averages over initial nodes.
@@ -992,6 +1044,40 @@ class Infer(object):
             sdists = np.array(pis)
 
         return sdists
+
+    def predictive_probability(self, x, initial_node=None):
+        """
+        Returns the mean predictive probability of `x` given `initial_node`.
+
+        That is, we calculate::
+
+            \Pr(x | D, \sigma) = \int \Pr( x | D, \theta, \sigma)
+                                      \Pr( \theta | D, \sigma) d \theta
+
+        This is a calculation from the posterior predictive distribution.
+
+        Parameters
+        ----------
+        x : iterable
+            The new data used to calculate the predictive probability.
+        initial_node : int or None
+            The initial node. If `None`, then the predictive probability is
+            averaged over the initial node posterior distribution.
+
+        Returns
+        -------
+        p : float
+            The base-e logarithm of the mean predictive probability of `x`.
+
+        Raises
+        ------
+        InvalidInitialNode
+            If `initial_node` is not a valid initial node.
+
+        """
+        new = self.get_updated_prior()
+        new.add_counts_from(x)
+        return new.log_evidence(initial_node)
 
 class InferCP(Infer):
     _posterior_class = DirichletDistributionCP
