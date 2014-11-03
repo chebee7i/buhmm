@@ -52,3 +52,13 @@ class TestSmoke:
         w = '1'
         p2B = m2B.probability(w, start=fnode)
         assert_almost_equal(p2B, x.predictive_probability(w, 'B'))
+
+    def test_infer(self):
+        m = machines.Even()
+        m.prng.seed(0)
+        d = m.symbols(100)
+        x = buhmm.Infer(m, d)
+        evid = x.log_evidence()
+        assert_almost_equal(evid, -68.165400496389665)
+        pred = x.predictive_probability('1011')
+        assert_almost_equal(pred, -2.0372080704707334)
