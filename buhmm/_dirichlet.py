@@ -1049,12 +1049,15 @@ class Infer(object):
         """
         Returns the mean predictive probability of `x` given `initial_node`.
 
-        That is, we calculate::
+        That is, we calculate:
 
             \Pr(x | D, \sigma) = \int \Pr( x | D, \theta, \sigma)
                                       \Pr( \theta | D, \sigma) d \theta
 
-        This is a calculation from the posterior predictive distribution.
+        This is a calculation from the posterior predictive distribution. When
+        `initial_node` is `None`, then we calculate:
+
+            \Pr(x | D) = \sum \Pr(x | D, \sigma) \Pr( \sigma | D)
 
         Parameters
         ----------
