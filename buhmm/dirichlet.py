@@ -545,7 +545,7 @@ class ModelComparisonPredictive(ModelComparison):
     """
     predictive_probabilities = None
 
-    def __init__(self, infers, test):
+    def __init__(self, infers, test=None):
         """
         Parameters
         ----------
@@ -556,9 +556,8 @@ class ModelComparisonPredictive(ModelComparison):
 
         """
         self.infers = infers
-        d, probs = self.compare(test)
-        self.model_dist = d
-        self.predictive_probabilities = probs
+        if test is not None:
+            self.compare(test)
 
     def compare(self, test):
         base = 2
@@ -576,4 +575,8 @@ class ModelComparisonPredictive(ModelComparison):
 
         d = dit.ScalarDistribution(pmf, base=base)
         d.set_base('linear')
+        d.make_dense()
+
+        self.model_dist = d
+        self.predictive_probabilities = predictive_probabilities
         return d, predictive_probabilities
