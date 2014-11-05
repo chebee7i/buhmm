@@ -33,7 +33,7 @@ def test_tmatrix_from_canonical1():
     delta = tmatrix_from_canonical(m2).tolist()
     assert_equal( delta, [[0,1],[-1,0]])
 
-def test_tmatrix_from_canonical1():
+def test_tmatrix_from_canonical2():
     # Test using a constructed canonical HMM
     m = machines.MealyHMM()
     m.add_edge(0, 0, o=0, p=1)
