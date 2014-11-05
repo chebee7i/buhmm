@@ -21,3 +21,4 @@ NumPy array with shape equal to `(n, k)`, where `n` is the number of nodes and
 from .canonical import *
 from .counts import *
 from .dirichlet import *
+from .misc import *

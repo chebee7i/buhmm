@@ -7,14 +7,23 @@ from __future__ import division
 
 import numpy as np
 
+__all__ = [
+    'logspace_int'
+]
+
 def logspace_int(limit, num=50):
     """
-    Returns (approximately) logarithmically spaced integers from 0 to `limit`.
+    Returns integers spaced (approximately) evenly on a log scale.
 
-    This is often more appropriate than calling `np.logspace(...).astype(int)`,
+    Thus, the integers are exponentially separated on a linear scale. The
+    restriction to integers means that the spacing is not exactly even on a log
+    scale. In particular, the smaller integers can grow linearly. This provides
+    more coverage at the small scale, which is often desirable when subsampling
+    a large array such that you have less coverage at the tail end (and more
+    at the beginning).
+
+    This function is behaves nicer than calling `np.logspace(...).astype(int)`,
     or something similar, as those approaches will contain duplicate integers.
-
-    One common use case is to generate logarithmically spaced indices.
 
     Parameters
     ----------
