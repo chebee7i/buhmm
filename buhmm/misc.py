@@ -15,7 +15,7 @@ def logspace_int(limit, num=50):
     """
     Returns integers spaced (approximately) evenly on a log scale.
 
-    Thus, the integers are exponentially separated on a linear scale. The
+    This means the integers are exponentially separated on a linear scale. The
     restriction to integers means that the spacing is not exactly even on a log
     scale. In particular, the smaller integers can grow linearly. This provides
     more coverage at the small scale, which is often desirable when subsampling
