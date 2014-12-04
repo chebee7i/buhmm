@@ -83,12 +83,14 @@ class DirichletDistribution(object):
 
         # Canonicalize the machine and data.
         symbols = sorted(machine.alphabet())
-        seen = sorted(set(data))
-        if verify and not set(data).issubset(set(symbols)):
-            msg = "Data contains symbols not in the alphabet of the machine!\n"
-            msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", symbols)
-            msg += "\n\t {0: <18} {1}".format("Data Alphabet:", seen)
-            raise Exception(msg)
+        if verify:
+            data_set = set(data)
+            seen = sorted(data_set)
+            if  not data_set.issubset(set(symbols)):
+                msg = "Data contains symbols not in the machine's alphabet!\n"
+                msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", symbols)
+                msg += "\n\t {0: <18} {1}".format("Data Alphabet:", seen)
+                raise Exception(msg)
 
         data, _ = standardize_data(data, symbols)
 
