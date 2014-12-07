@@ -75,9 +75,18 @@ def main():
         libraries=['m'],
     )
 
+
+    dirichlet = Extension(
+        "buhmm._dirichlet",
+        ["buhmm/_dirichlet.pyx"],
+        include_dirs=[np.get_include()],
+        libraries=['m'],
+    )
+
     # Active Cython modules
     cython_modules = [
         counts,
+        dirichlet
     ]
 
     other_modules = []
