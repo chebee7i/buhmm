@@ -479,6 +479,9 @@ class DirichletDistribution(object):
         trans = self.edge_alphas[initial_node] + \
                 self.edge_counts[initial_node]
 
+        # Make sure we get a float array
+        trans = trans.astype(FTYPE)
+
         # Now, we divide each row of trans by its normalization constant:
         #
         #   \sum_x (alpha(s, x | s_i) + counts(s, x | s_i))
