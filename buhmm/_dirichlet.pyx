@@ -127,6 +127,7 @@ cdef _log_evidence(
 
         # Now iterate through every edge (u, x)
         for i in range(nEdges):
+
             u = <unsigned int>edges[i, zero]
             x = <unsigned int>edges[i, one]
             temp[zero, i] = edge_alphas[initial_node, u, x] + \
@@ -139,14 +140,12 @@ cdef _log_evidence(
             temp[one, i + nEdges] = node_alphas[initial_node, i] + \
                                   node_counts[initial_node, i]
 
-
         temp_ = np.asarray(temp)
         gammaln(temp_, temp_)
-        temp_ *= -1
+        temp_[1] *= -1
         log_evid = temp_.sum()
 
     # Return base-2 logarithms.
-
     return log_evid / LOGE2
 
 
@@ -267,6 +266,8 @@ class DirichletDistribution(object):
         self.nInitial = len(self.valid_initial_nodes)
         self.nEdges = self.edges.shape[0]
 
+        self.logevid_cache = {}
+
     def _update_node_alphacounts(self, alpha=True, counts=True):
         """
         Recalculates `node_alpha` and `node_counts`.
@@ -325,18 +326,25 @@ class DirichletDistribution(object):
                 self.valid_initial_nodes = np.array(np.nonzero(self.final_node != -1)[0])
 
         self._update_node_alphacounts()
+        self.logevid_cache = {}
 
     @cython.boundscheck(False)
-    def log_evidence(self, unsigned int initial_node):
-        return _log_evidence(initial_node,
-                            self.nEdges, self.nNodes,
-                            self.final_node,
-                            self.edges,
-                            self.edge_alphas,
-                            self.edge_counts,
-                            self.node_alphas,
-                            self.node_counts,
-                            self._temp)
+    def log_evidence(self, unsigned int initial_node, cache=True):
+        if cache and initial_node in self.logevid_cache:
+            logevid = self.logevid_cache.get(initial_node)
+        else:
+            logevid = _log_evidence(initial_node,
+                                self.nEdges, self.nNodes,
+                                self.final_node,
+                                self.edges,
+                                self.edge_alphas,
+                                self.edge_counts,
+                                self.node_alphas,
+                                self.node_counts,
+                                self._temp)
+            if cache:
+                self.logevid_cache[initial_node] = logevid
+        return logevid
 
     '''
     @cython.boundscheck(False)
