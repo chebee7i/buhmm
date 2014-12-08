@@ -131,6 +131,7 @@ cdef _log_evidence(
 
         # Now iterate through every edge (u, x)
         for i in range(nEdges):
+
             u = <unsigned int>edges[i, zero]
             x = <unsigned int>edges[i, one]
             temp[zero, i] = edge_alphas[initial_node, u, x] + \
@@ -144,7 +145,7 @@ cdef _log_evidence(
                                   node_counts[initial_node, i]
 
         gammaln(temp, temp)
-        temp *= -1
+        temp[1] *= -1
         log_evid = temp.sum()
 
     # Return base-2 logarithms.
@@ -268,6 +269,8 @@ class DirichletDistribution(object):
         shape = (2, len(self.edges) + len(self.nodes))
         self._temp = np.empty(shape, dtype=float)
 
+        self.logevid_cache = {}
+
     def _update_node_alphacounts(self, alpha=True, counts=True):
         """
         Recalculates `node_alpha` and `node_counts`.
@@ -363,17 +366,25 @@ class DirichletDistribution(object):
                 self.edge_counts[negative] = 0
 
         self._update_node_alphacounts()
+        self.logevid_cache = {}
 
-    def log_evidence(self, unsigned int initial_node):
-        return _log_evidence(initial_node,
-                            self.nEdges, self.nNodes,
-                            self.final_node,
-                            self.edges,
-                            self.edge_alphas,
-                            self.edge_counts,
-                            self.node_alphas,
-                            self.node_counts,
-                            self._temp)
+    @cython.boundscheck(False)
+    def log_evidence(self, unsigned int initial_node, cache=True):
+        if cache and initial_node in self.logevid_cache:
+            logevid = self.logevid_cache.get(initial_node)
+        else:
+            logevid = _log_evidence(initial_node,
+                                self.nEdges, self.nNodes,
+                                self.final_node,
+                                self.edges,
+                                self.edge_alphas,
+                                self.edge_counts,
+                                self.node_alphas,
+                                self.node_counts,
+                                self._temp)
+            if cache:
+                self.logevid_cache[initial_node] = logevid
+        return logevid
 
     def log_evidence_array(self):
         """
