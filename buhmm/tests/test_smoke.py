@@ -28,6 +28,16 @@ class TestSmoke:
         uhmm2 = xnew.posterior.pm_uhmm('A')
         np.testing.assert_almost_equal(uhmm1, uhmm2)
 
+    def test_pm_uhmm2(self):
+        m = machines.Even()
+        d = '1111'
+        x = buhmm.Infer(m, d)
+        xnew = x.get_updated_prior()
+
+        uhmm1 = x.posterior.pm_uhmm('A')
+        uhmm2 = xnew.posterior.pm_uhmm('A')
+        np.testing.assert_almost_equal(uhmm1, uhmm2)
+
     def test_predictive_probability(self):
         m = machines.Even()
         d = '11111'
