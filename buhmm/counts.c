@@ -866,8 +866,8 @@ static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type);
 
 static void __Pyx_RaiseBufferFallbackError(void);
 
-#define __Pyx_BufPtrCContig2d(type, buf, i0, s0, i1, s1) ((type)((char*)buf + i0 * s0) + i1)
 #define __Pyx_BufPtrCContig1d(type, buf, i0, s0) ((type)buf + i0)
+#define __Pyx_BufPtrCContig2d(type, buf, i0, s0, i1, s1) ((type)((char*)buf + i0 * s0) + i1)
 #define __Pyx_BufPtrCContig3d(type, buf, i0, s0, i1, s1, i2, s2) ((type)((char*)buf + i0 * s0 + i1 * s1) + i2)
 static CYTHON_INLINE void __Pyx_ErrRestore(PyObject *type, PyObject *value, PyObject *tb);
 static CYTHON_INLINE void __Pyx_ErrFetch(PyObject **type, PyObject **value, PyObject **tb);
@@ -1086,7 +1086,7 @@ static PyObject *__pyx_builtin_range;
 static PyObject *__pyx_builtin_ValueError;
 static PyObject *__pyx_builtin_RuntimeError;
 static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_n, PyObject *__pyx_v_k, PyObject *__pyx_v_L, PyObject *__pyx_v_node_path); /* proto */
-static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_tmatrix, PyArrayObject *__pyx_v_data, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_node_path, PyObject *__pyx_v_out_arrays); /* proto */
+static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_tmatrix, PyArrayObject *__pyx_v_data, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_node_path, PyObject *__pyx_v_out_arrays, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_from_final); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static char __pyx_k_B[] = "B";
@@ -1122,12 +1122,14 @@ static char __pyx_k_int64[] = "int64";
 static char __pyx_k_numpy[] = "numpy";
 static char __pyx_k_range[] = "range";
 static char __pyx_k_zeros[] = "zeros";
+static char __pyx_k_arange[] = "arange";
 static char __pyx_k_counts[] = "counts";
 static char __pyx_k_import[] = "__import__";
 static char __pyx_k_symbol[] = "symbol";
 static char __pyx_k_tmatrix[] = "tmatrix";
 static char __pyx_k_node_path[] = "node_path";
 static char __pyx_k_ValueError[] = "ValueError";
+static char __pyx_k_from_final[] = "from_final";
 static char __pyx_k_node_paths[] = "node_paths";
 static char __pyx_k_out_arrays[] = "out_arrays";
 static char __pyx_k_currentNode[] = "currentNode";
@@ -1135,9 +1137,9 @@ static char __pyx_k_initialNode[] = "initialNode";
 static char __pyx_k_path_counts[] = "path_counts";
 static char __pyx_k_RuntimeError[] = "RuntimeError";
 static char __pyx_k_buhmm_counts[] = "buhmm.counts";
-static char __pyx_k_path_counts_line_60[] = "path_counts (line 60)";
+static char __pyx_k_path_counts_line_61[] = "path_counts (line 61)";
 static char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
-static char __pyx_k_Calculates_edge_counts_final_no[] = "\n    Calculates edge counts, final nodes, and node paths from data.\n\n    Parameters\n    ----------\n    tmatrix : NumPy int array, shape (n, k)\n        The transition matrix of a canonical hidden Markov model. Rows\n        correspond to nodes, columns to symbols, and entries correspond to\n        the next node. If a transition is not possible, then the entry\n        should be -1.\n    data : NumPy int array, shape (L,)\n        The data points.  The minimum value in the array should be 0, while\n        the maximum value in the array should be `k - 1`, where `k` is the\n        number of columns in `tmatrix`.\n    node_path : bool\n        Boolean specifying whether node paths should be stored for each\n        possible initial node.\n    out_arrays : tuple or None\n        If a tuple, then there should be 3 elements, to be used for `counts`,\n        `final`, and `node_paths` in the output. Using this parameter will\n        reduce the number of memory allocations when doing inference serially\n        on a large number of hidden Markov models, all of which have the same\n        number of nodes and symbols, and if `node_path` is `True`, also\n        the same amount of data. If `node_path` is `False`, then the 3rd\n        element can be `None`.\n\n    Returns\n    -------\n    counts : NumPy int array, shape (n, n, k)\n        The number of times each edge was traversed. For both nonedges and\n        edges not visited, the count will be zero. Thus, `counts` cannot and\n        should not be used to determine the transition structure. First axis\n        represents the initial node, second axis the current node, and third\n        axis the current symbol.\n    final : NumPy int array, shape (n,)\n        Entries represent the final node visited, where the index of the entry\n        specifies the initial node. If it is not possible to observe the data\n        from a particular node, then the value will be -1.\n    node_paths : None | NumPy int array, sha""pe (n, L+1)\n        If `node_path` is `True`, then this is an integer array of the nodes\n        visited from each initial node. If a particular initial node ends up\n        not being valid, then the entries are valid only up to the first\n        element that is -1. If `node_path` is `False`, then this is `None`.\n\n    Examples\n    --------\n    >>> m = machines.Even()\n    >>> delta, nodes, alphabet = tmatrix(m)\n    >>> data = standardize_data(m.symbols(100), alphabet)\n    >>> counts, last, node_paths = path_counts(delta, data)\n\n    ";
+static char __pyx_k_Calculates_edge_counts_final_no[] = "\n    Calculates edge counts, final nodes, and node paths from data.\n\n    Parameters\n    ----------\n    tmatrix : NumPy int array, shape (n, k)\n        The transition matrix of a canonical hidden Markov model. Rows\n        correspond to nodes, columns to symbols, and entries correspond to\n        the next node. If a transition is not possible, then the entry\n        should be -1.\n    data : NumPy int array, shape (L,)\n        The data points.  The minimum value in the array should be 0, while\n        the maximum value in the array should be `k - 1`, where `k` is the\n        number of columns in `tmatrix`.\n    node_path : bool\n        Boolean specifying whether node paths should be stored for each\n        possible initial node.\n    out_arrays : tuple or None\n        If a tuple, then there should be 3 elements, to be used for `counts`,\n        `final`, and `node_paths` in the output. Using this parameter will\n        reduce the number of memory allocations when doing inference serially\n        on a large number of hidden Markov models, all of which have the same\n        number of nodes and symbols, and if `node_path` is `True`, also\n        the same amount of data. If `node_path` is `False`, then the 3rd\n        element can be `None`.\n    from_final : bool\n        When `True`, it specifies that counts should continue from a previous\n        iteration's final nodes. In order to do this `out_arrays` must be\n        provided. In that case, we use the values of `final` to initiate the\n        current node for each initial node. Any element with the value of -1\n        will designate the initial node as invalid. If `False`, then `final`\n        is initialized to consecutive integers beginning from zero.\n\n    Returns\n    -------\n    counts : NumPy int array, shape (n, n, k)\n        The number of times each edge was traversed. For both nonedges and\n        edges not visited, the count will be zero. Thus, `counts` cannot and\n        should"" not be used to determine the transition structure. First axis\n        represents the initial node, second axis the current node, and third\n        axis the current symbol.\n    final : NumPy int array, shape (n,)\n        Entries represent the final node visited, where the index of the entry\n        specifies the initial node. If it is not possible to observe the data\n        from a particular node, then the value will be -1.\n    node_paths : None | NumPy int array, shape (n, L+1)\n        If `node_path` is `True`, then this is an integer array of the nodes\n        visited from each initial node. If a particular initial node ends up\n        not being valid, then the entries are valid only up to the first\n        element that is -1. If `node_path` is `False`, then this is `None`.\n\n    Examples\n    --------\n    >>> m = machines.Even()\n    >>> delta, nodes, alphabet = tmatrix(m)\n    >>> data = standardize_data(m.symbols(100), alphabet)\n    >>> counts, last, node_paths = path_counts(delta, data)\n\n    ";
 static char __pyx_k_Path_counts_for_canonical_hidde[] = "\nPath counts for canonical hidden Markov models.\n\n";
 static char __pyx_k_home_ellisocj_Development_git_b[] = "/home/ellisocj/Development/git/buhmm/buhmm/counts.pyx";
 static char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
@@ -1155,6 +1157,7 @@ static PyObject *__pyx_kp_u_Non_native_byte_order_not_suppor;
 static PyObject *__pyx_n_s_RuntimeError;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_all;
+static PyObject *__pyx_n_s_arange;
 static PyObject *__pyx_n_s_bool;
 static PyObject *__pyx_n_s_buhmm_counts;
 static PyObject *__pyx_n_s_counts;
@@ -1162,6 +1165,7 @@ static PyObject *__pyx_n_s_currentNode;
 static PyObject *__pyx_n_s_data;
 static PyObject *__pyx_n_s_dtype;
 static PyObject *__pyx_n_s_final;
+static PyObject *__pyx_n_s_from_final;
 static PyObject *__pyx_kp_s_home_ellisocj_Development_git_b;
 static PyObject *__pyx_n_s_i;
 static PyObject *__pyx_n_s_import;
@@ -1178,7 +1182,7 @@ static PyObject *__pyx_n_s_np;
 static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_n_s_out_arrays;
 static PyObject *__pyx_n_s_path_counts;
-static PyObject *__pyx_kp_u_path_counts_line_60;
+static PyObject *__pyx_kp_u_path_counts_line_61;
 static PyObject *__pyx_n_s_range;
 static PyObject *__pyx_n_s_symbol;
 static PyObject *__pyx_n_s_test;
@@ -1309,7 +1313,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
  * 
  *     """
  *     counts = np.zeros((n,n,k), dtype=int)             # <<<<<<<<<<<<<<
- *     final = np.zeros(n, dtype=int)
+ *     final = np.arange(n, dtype=int)
  *     node_paths = None
  */
   __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 51; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -1347,13 +1351,13 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
   /* "buhmm/counts.pyx":52
  *     """
  *     counts = np.zeros((n,n,k), dtype=int)
- *     final = np.zeros(n, dtype=int)             # <<<<<<<<<<<<<<
+ *     final = np.arange(n, dtype=int)             # <<<<<<<<<<<<<<
  *     node_paths = None
  *     if node_path:
  */
   __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_zeros); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_arange); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_t_4 = PyTuple_New(1); if (unlikely(!__pyx_t_4)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 52; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -1374,7 +1378,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
 
   /* "buhmm/counts.pyx":53
  *     counts = np.zeros((n,n,k), dtype=int)
- *     final = np.zeros(n, dtype=int)
+ *     final = np.arange(n, dtype=int)
  *     node_paths = None             # <<<<<<<<<<<<<<
  *     if node_path:
  *         node_paths = np.zeros((n,L+1), dtype=int)
@@ -1383,7 +1387,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
   __pyx_v_node_paths = Py_None;
 
   /* "buhmm/counts.pyx":54
- *     final = np.zeros(n, dtype=int)
+ *     final = np.arange(n, dtype=int)
  *     node_paths = None
  *     if node_path:             # <<<<<<<<<<<<<<
  *         node_paths = np.zeros((n,L+1), dtype=int)
@@ -1438,7 +1442,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
  *         node_paths = np.zeros((n,L+1), dtype=int)
  *     return counts, final, node_paths             # <<<<<<<<<<<<<<
  * 
- * @cython.boundscheck(False)
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_1 = PyTuple_New(3); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 56; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
@@ -1481,7 +1485,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
   return __pyx_r;
 }
 
-/* "buhmm/counts.pyx":60
+/* "buhmm/counts.pyx":61
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,             # <<<<<<<<<<<<<<
@@ -1491,13 +1495,14 @@ static PyObject *__pyx_pf_5buhmm_6counts_out_arrays(CYTHON_UNUSED PyObject *__py
 
 /* Python wrapper */
 static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_5buhmm_6counts_2path_counts[] = "path_counts(ndarray tmatrix, ndarray data, BTYPE_t node_path=False, out_arrays=None)\n\n    Calculates edge counts, final nodes, and node paths from data.\n\n    Parameters\n    ----------\n    tmatrix : NumPy int array, shape (n, k)\n        The transition matrix of a canonical hidden Markov model. Rows\n        correspond to nodes, columns to symbols, and entries correspond to\n        the next node. If a transition is not possible, then the entry\n        should be -1.\n    data : NumPy int array, shape (L,)\n        The data points.  The minimum value in the array should be 0, while\n        the maximum value in the array should be `k - 1`, where `k` is the\n        number of columns in `tmatrix`.\n    node_path : bool\n        Boolean specifying whether node paths should be stored for each\n        possible initial node.\n    out_arrays : tuple or None\n        If a tuple, then there should be 3 elements, to be used for `counts`,\n        `final`, and `node_paths` in the output. Using this parameter will\n        reduce the number of memory allocations when doing inference serially\n        on a large number of hidden Markov models, all of which have the same\n        number of nodes and symbols, and if `node_path` is `True`, also\n        the same amount of data. If `node_path` is `False`, then the 3rd\n        element can be `None`.\n\n    Returns\n    -------\n    counts : NumPy int array, shape (n, n, k)\n        The number of times each edge was traversed. For both nonedges and\n        edges not visited, the count will be zero. Thus, `counts` cannot and\n        should not be used to determine the transition structure. First axis\n        represents the initial node, second axis the current node, and third\n        axis the current symbol.\n    final : NumPy int array, shape (n,)\n        Entries represent the final node visited, where the index of the entry\n        specifies the initial node. If it is not possible to observe the data\n        from a par""ticular node, then the value will be -1.\n    node_paths : None | NumPy int array, shape (n, L+1)\n        If `node_path` is `True`, then this is an integer array of the nodes\n        visited from each initial node. If a particular initial node ends up\n        not being valid, then the entries are valid only up to the first\n        element that is -1. If `node_path` is `False`, then this is `None`.\n\n    Examples\n    --------\n    >>> m = machines.Even()\n    >>> delta, nodes, alphabet = tmatrix(m)\n    >>> data = standardize_data(m.symbols(100), alphabet)\n    >>> counts, last, node_paths = path_counts(delta, data)\n\n    ";
+static char __pyx_doc_5buhmm_6counts_2path_counts[] = "path_counts(ndarray tmatrix, ndarray data, BTYPE_t node_path=False, out_arrays=None, BTYPE_t from_final=False)\n\n    Calculates edge counts, final nodes, and node paths from data.\n\n    Parameters\n    ----------\n    tmatrix : NumPy int array, shape (n, k)\n        The transition matrix of a canonical hidden Markov model. Rows\n        correspond to nodes, columns to symbols, and entries correspond to\n        the next node. If a transition is not possible, then the entry\n        should be -1.\n    data : NumPy int array, shape (L,)\n        The data points.  The minimum value in the array should be 0, while\n        the maximum value in the array should be `k - 1`, where `k` is the\n        number of columns in `tmatrix`.\n    node_path : bool\n        Boolean specifying whether node paths should be stored for each\n        possible initial node.\n    out_arrays : tuple or None\n        If a tuple, then there should be 3 elements, to be used for `counts`,\n        `final`, and `node_paths` in the output. Using this parameter will\n        reduce the number of memory allocations when doing inference serially\n        on a large number of hidden Markov models, all of which have the same\n        number of nodes and symbols, and if `node_path` is `True`, also\n        the same amount of data. If `node_path` is `False`, then the 3rd\n        element can be `None`.\n    from_final : bool\n        When `True`, it specifies that counts should continue from a previous\n        iteration's final nodes. In order to do this `out_arrays` must be\n        provided. In that case, we use the values of `final` to initiate the\n        current node for each initial node. Any element with the value of -1\n        will designate the initial node as invalid. If `False`, then `final`\n        is initialized to consecutive integers beginning from zero.\n\n    Returns\n    -------\n    counts : NumPy int array, shape (n, n, k)\n        The number of times each edge was traversed. For"" both nonedges and\n        edges not visited, the count will be zero. Thus, `counts` cannot and\n        should not be used to determine the transition structure. First axis\n        represents the initial node, second axis the current node, and third\n        axis the current symbol.\n    final : NumPy int array, shape (n,)\n        Entries represent the final node visited, where the index of the entry\n        specifies the initial node. If it is not possible to observe the data\n        from a particular node, then the value will be -1.\n    node_paths : None | NumPy int array, shape (n, L+1)\n        If `node_path` is `True`, then this is an integer array of the nodes\n        visited from each initial node. If a particular initial node ends up\n        not being valid, then the entries are valid only up to the first\n        element that is -1. If `node_path` is `False`, then this is `None`.\n\n    Examples\n    --------\n    >>> m = machines.Even()\n    >>> delta, nodes, alphabet = tmatrix(m)\n    >>> data = standardize_data(m.symbols(100), alphabet)\n    >>> counts, last, node_paths = path_counts(delta, data)\n\n    ";
 static PyMethodDef __pyx_mdef_5buhmm_6counts_3path_counts = {"path_counts", (PyCFunction)__pyx_pw_5buhmm_6counts_3path_counts, METH_VARARGS|METH_KEYWORDS, __pyx_doc_5buhmm_6counts_2path_counts};
 static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_tmatrix = 0;
   PyArrayObject *__pyx_v_data = 0;
   __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_node_path;
   PyObject *__pyx_v_out_arrays = 0;
+  __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_from_final;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -1505,21 +1510,22 @@ static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyOb
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("path_counts (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_tmatrix,&__pyx_n_s_data,&__pyx_n_s_node_path,&__pyx_n_s_out_arrays,0};
-    PyObject* values[4] = {0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_tmatrix,&__pyx_n_s_data,&__pyx_n_s_node_path,&__pyx_n_s_out_arrays,&__pyx_n_s_from_final,0};
+    PyObject* values[5] = {0,0,0,0,0};
 
-    /* "buhmm/counts.pyx":63
+    /* "buhmm/counts.pyx":64
  *                 np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
  *                 BTYPE_t node_path=False,
- *                 out_arrays=None):             # <<<<<<<<<<<<<<
+ *                 out_arrays=None,             # <<<<<<<<<<<<<<
+ *                 BTYPE_t from_final=False):
  *     """
- *     Calculates edge counts, final nodes, and node paths from data.
  */
     values[3] = ((PyObject *)Py_None);
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
         case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
@@ -1535,7 +1541,7 @@ static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyOb
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_data)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("path_counts", 0, 2, 4, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+          __Pyx_RaiseArgtupleInvalid("path_counts", 0, 2, 5, 1); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
         }
         case  2:
         if (kw_args > 0) {
@@ -1547,12 +1553,18 @@ static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyOb
           PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_out_arrays);
           if (value) { values[3] = value; kw_args--; }
         }
+        case  4:
+        if (kw_args > 0) {
+          PyObject* value = PyDict_GetItem(__pyx_kwds, __pyx_n_s_from_final);
+          if (value) { values[4] = value; kw_args--; }
+        }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "path_counts") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "path_counts") < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
         case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
         case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
@@ -1564,33 +1576,46 @@ static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyOb
     __pyx_v_tmatrix = ((PyArrayObject *)values[0]);
     __pyx_v_data = ((PyArrayObject *)values[1]);
     if (values[2]) {
-      __pyx_v_node_path = __Pyx_PyObject_IsTrue(values[2]); if (unlikely((__pyx_v_node_path == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+      __pyx_v_node_path = __Pyx_PyObject_IsTrue(values[2]); if (unlikely((__pyx_v_node_path == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 63; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
     } else {
 
-      /* "buhmm/counts.pyx":62
+      /* "buhmm/counts.pyx":63
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
  *                 np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
  *                 BTYPE_t node_path=False,             # <<<<<<<<<<<<<<
- *                 out_arrays=None):
- *     """
+ *                 out_arrays=None,
+ *                 BTYPE_t from_final=False):
  */
       __pyx_v_node_path = ((__pyx_t_5buhmm_6counts_BTYPE_t)0);
     }
     __pyx_v_out_arrays = values[3];
+    if (values[4]) {
+      __pyx_v_from_final = __Pyx_PyObject_IsTrue(values[4]); if (unlikely((__pyx_v_from_final == (int)-1) && PyErr_Occurred())) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 65; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+    } else {
+
+      /* "buhmm/counts.pyx":65
+ *                 BTYPE_t node_path=False,
+ *                 out_arrays=None,
+ *                 BTYPE_t from_final=False):             # <<<<<<<<<<<<<<
+ *     """
+ *     Calculates edge counts, final nodes, and node paths from data.
+ */
+      __pyx_v_from_final = ((__pyx_t_5buhmm_6counts_BTYPE_t)0);
+    }
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("path_counts", 0, 2, 4, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
+  __Pyx_RaiseArgtupleInvalid("path_counts", 0, 2, 5, PyTuple_GET_SIZE(__pyx_args)); {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L3_error;}
   __pyx_L3_error:;
   __Pyx_AddTraceback("buhmm.counts.path_counts", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_tmatrix), __pyx_ptype_5numpy_ndarray, 1, "tmatrix", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), __pyx_ptype_5numpy_ndarray, 1, "data", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-  __pyx_r = __pyx_pf_5buhmm_6counts_2path_counts(__pyx_self, __pyx_v_tmatrix, __pyx_v_data, __pyx_v_node_path, __pyx_v_out_arrays);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_tmatrix), __pyx_ptype_5numpy_ndarray, 1, "tmatrix", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_data), __pyx_ptype_5numpy_ndarray, 1, "data", 0))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 62; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_r = __pyx_pf_5buhmm_6counts_2path_counts(__pyx_self, __pyx_v_tmatrix, __pyx_v_data, __pyx_v_node_path, __pyx_v_out_arrays, __pyx_v_from_final);
 
-  /* "buhmm/counts.pyx":60
+  /* "buhmm/counts.pyx":61
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,             # <<<<<<<<<<<<<<
@@ -1607,7 +1632,7 @@ static PyObject *__pyx_pw_5buhmm_6counts_3path_counts(PyObject *__pyx_self, PyOb
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_tmatrix, PyArrayObject *__pyx_v_data, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_node_path, PyObject *__pyx_v_out_arrays) {
+static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_tmatrix, PyArrayObject *__pyx_v_data, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_node_path, PyObject *__pyx_v_out_arrays, __pyx_t_5buhmm_6counts_BTYPE_t __pyx_v_from_final) {
   int __pyx_v_initialNode;
   int __pyx_v_currentNode;
   int __pyx_v_symbol;
@@ -1646,9 +1671,9 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   PyObject *__pyx_t_14 = NULL;
   int __pyx_t_15;
   int __pyx_t_16;
-  long __pyx_t_17;
+  int __pyx_t_17;
   int __pyx_t_18;
-  int __pyx_t_19;
+  long __pyx_t_19;
   int __pyx_t_20;
   int __pyx_t_21;
   int __pyx_t_22;
@@ -1656,7 +1681,9 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   int __pyx_t_24;
   int __pyx_t_25;
   int __pyx_t_26;
-  long __pyx_t_27;
+  int __pyx_t_27;
+  int __pyx_t_28;
+  long __pyx_t_29;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -1683,16 +1710,16 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   __pyx_pybuffernd_data.rcbuffer = &__pyx_pybuffer_data;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_tmatrix.rcbuffer->pybuffer, (PyObject*)__pyx_v_tmatrix, &__Pyx_TypeInfo_nn___pyx_t_5buhmm_6counts_ITYPE_t, PyBUF_FORMAT| PyBUF_C_CONTIGUOUS, 2, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_tmatrix.rcbuffer->pybuffer, (PyObject*)__pyx_v_tmatrix, &__Pyx_TypeInfo_nn___pyx_t_5buhmm_6counts_ITYPE_t, PyBUF_FORMAT| PyBUF_C_CONTIGUOUS, 2, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_pybuffernd_tmatrix.diminfo[0].strides = __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_tmatrix.diminfo[0].shape = __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_tmatrix.diminfo[1].strides = __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_tmatrix.diminfo[1].shape = __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_data.rcbuffer->pybuffer, (PyObject*)__pyx_v_data, &__Pyx_TypeInfo_nn___pyx_t_5buhmm_6counts_ITYPE_t, PyBUF_FORMAT| PyBUF_C_CONTIGUOUS, 1, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_data.rcbuffer->pybuffer, (PyObject*)__pyx_v_data, &__Pyx_TypeInfo_nn___pyx_t_5buhmm_6counts_ITYPE_t, PyBUF_FORMAT| PyBUF_C_CONTIGUOUS, 1, 0, __pyx_stack) == -1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   }
   __pyx_pybuffernd_data.diminfo[0].strides = __pyx_pybuffernd_data.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_data.diminfo[0].shape = __pyx_pybuffernd_data.rcbuffer->pybuffer.shape[0];
 
-  /* "buhmm/counts.pyx":122
+  /* "buhmm/counts.pyx":131
  *         np.ndarray[ITYPE_t, ndim=2, mode="c"] node_paths
  * 
  *     n = tmatrix.shape[0]             # <<<<<<<<<<<<<<
@@ -1701,7 +1728,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
  */
   __pyx_v_n = (__pyx_v_tmatrix->dimensions[0]);
 
-  /* "buhmm/counts.pyx":123
+  /* "buhmm/counts.pyx":132
  * 
  *     n = tmatrix.shape[0]
  *     k = tmatrix.shape[1]             # <<<<<<<<<<<<<<
@@ -1710,7 +1737,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
  */
   __pyx_v_k = (__pyx_v_tmatrix->dimensions[1]);
 
-  /* "buhmm/counts.pyx":124
+  /* "buhmm/counts.pyx":133
  *     n = tmatrix.shape[0]
  *     k = tmatrix.shape[1]
  *     L = data.shape[0]             # <<<<<<<<<<<<<<
@@ -1719,7 +1746,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
  */
   __pyx_v_L = (__pyx_v_data->dimensions[0]);
 
-  /* "buhmm/counts.pyx":127
+  /* "buhmm/counts.pyx":136
  * 
  *     # Initialize arrays
  *     if out_arrays is not None:             # <<<<<<<<<<<<<<
@@ -1730,16 +1757,16 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "buhmm/counts.pyx":129
+    /* "buhmm/counts.pyx":138
  *     if out_arrays is not None:
  *         # Do not modify the values in counts in case we are updating counts.
  *         counts = out_arrays[0]             # <<<<<<<<<<<<<<
  *         final = out_arrays[1]
  *         node_paths = out_arrays[2]
  */
-    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 129; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 138; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
     __Pyx_GOTREF(__pyx_t_3);
-    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 129; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 138; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __pyx_t_4 = ((PyArrayObject *)__pyx_t_3);
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -1755,22 +1782,22 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_counts.diminfo[0].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_counts.diminfo[0].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_counts.diminfo[1].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_counts.diminfo[1].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_counts.diminfo[2].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_counts.diminfo[2].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[2];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 129; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 138; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_4 = 0;
     __pyx_v_counts = ((PyArrayObject *)__pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "buhmm/counts.pyx":130
+    /* "buhmm/counts.pyx":139
  *         # Do not modify the values in counts in case we are updating counts.
  *         counts = out_arrays[0]
  *         final = out_arrays[1]             # <<<<<<<<<<<<<<
  *         node_paths = out_arrays[2]
  *     else:
  */
-    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 130; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
     __Pyx_GOTREF(__pyx_t_3);
-    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 130; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __pyx_t_9 = ((PyArrayObject *)__pyx_t_3);
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -1786,22 +1813,22 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_final.diminfo[0].strides = __pyx_pybuffernd_final.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_final.diminfo[0].shape = __pyx_pybuffernd_final.rcbuffer->pybuffer.shape[0];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 130; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_9 = 0;
     __pyx_v_final = ((PyArrayObject *)__pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "buhmm/counts.pyx":131
+    /* "buhmm/counts.pyx":140
  *         counts = out_arrays[0]
  *         final = out_arrays[1]
  *         node_paths = out_arrays[2]             # <<<<<<<<<<<<<<
  *     else:
- *         counts = np.zeros((n,n,k), dtype=int)
+ *         counts = np.zeros((n,n,k), dtype=ITYPE)
  */
-    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
+    __pyx_t_3 = __Pyx_GetItemInt(__pyx_v_out_arrays, 2, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(__pyx_t_3 == NULL)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;};
     __Pyx_GOTREF(__pyx_t_3);
-    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!(likely(((__pyx_t_3) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_3, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __pyx_t_10 = ((PyArrayObject *)__pyx_t_3);
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -1817,7 +1844,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_node_paths.diminfo[0].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_node_paths.diminfo[0].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_node_paths.diminfo[1].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_node_paths.diminfo[1].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[1];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 131; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 140; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_10 = 0;
     __pyx_v_node_paths = ((PyArrayObject *)__pyx_t_3);
@@ -1826,25 +1853,25 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   }
   /*else*/ {
 
-    /* "buhmm/counts.pyx":133
+    /* "buhmm/counts.pyx":142
  *         node_paths = out_arrays[2]
  *     else:
- *         counts = np.zeros((n,n,k), dtype=int)             # <<<<<<<<<<<<<<
- *         final = np.zeros(n, dtype=int)
+ *         counts = np.zeros((n,n,k), dtype=ITYPE)             # <<<<<<<<<<<<<<
+ *         final = np.zeros(n, dtype=ITYPE)
  *         node_paths = None
  */
-    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_zeros); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_zeros); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_11);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_3)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_12);
-    __pyx_t_13 = __Pyx_PyInt_From_int(__pyx_v_k); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_13 = __Pyx_PyInt_From_int(__pyx_v_k); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_13);
-    __pyx_t_14 = PyTuple_New(3); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_14 = PyTuple_New(3); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_14);
     PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_3);
     __Pyx_GIVEREF(__pyx_t_3);
@@ -1855,20 +1882,23 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
     __pyx_t_3 = 0;
     __pyx_t_12 = 0;
     __pyx_t_13 = 0;
-    __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_13);
     PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_14);
     __Pyx_GIVEREF(__pyx_t_14);
     __pyx_t_14 = 0;
-    __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_14);
-    if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, ((PyObject *)((PyObject*)(&PyInt_Type)))) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __pyx_t_12 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_12 = __Pyx_GetModuleGlobalName(__pyx_n_s_ITYPE); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_12);
+    if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, __pyx_t_12) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
+    __pyx_t_12 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_12);
     __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
     __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
     __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-    if (!(likely(((__pyx_t_12) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_12, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!(likely(((__pyx_t_12) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_12, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __pyx_t_4 = ((PyArrayObject *)__pyx_t_12);
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -1884,40 +1914,43 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_counts.diminfo[0].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_counts.diminfo[0].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_counts.diminfo[1].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_counts.diminfo[1].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[1]; __pyx_pybuffernd_counts.diminfo[2].strides = __pyx_pybuffernd_counts.rcbuffer->pybuffer.strides[2]; __pyx_pybuffernd_counts.diminfo[2].shape = __pyx_pybuffernd_counts.rcbuffer->pybuffer.shape[2];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 133; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 142; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_4 = 0;
     __pyx_v_counts = ((PyArrayObject *)__pyx_t_12);
     __pyx_t_12 = 0;
 
-    /* "buhmm/counts.pyx":134
+    /* "buhmm/counts.pyx":143
  *     else:
- *         counts = np.zeros((n,n,k), dtype=int)
- *         final = np.zeros(n, dtype=int)             # <<<<<<<<<<<<<<
+ *         counts = np.zeros((n,n,k), dtype=ITYPE)
+ *         final = np.zeros(n, dtype=ITYPE)             # <<<<<<<<<<<<<<
  *         node_paths = None
  *         if node_path:
  */
-    __pyx_t_12 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_12 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_12);
-    __pyx_t_14 = __Pyx_PyObject_GetAttrStr(__pyx_t_12, __pyx_n_s_zeros); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_14 = __Pyx_PyObject_GetAttrStr(__pyx_t_12, __pyx_n_s_zeros); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_14);
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_12);
-    __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_13);
     PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_12);
     __Pyx_GIVEREF(__pyx_t_12);
     __pyx_t_12 = 0;
-    __pyx_t_12 = PyDict_New(); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_12 = PyDict_New(); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_12);
-    if (PyDict_SetItem(__pyx_t_12, __pyx_n_s_dtype, ((PyObject *)((PyObject*)(&PyInt_Type)))) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-    __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_14, __pyx_t_13, __pyx_t_12); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __pyx_t_11 = __Pyx_GetModuleGlobalName(__pyx_n_s_ITYPE); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_GOTREF(__pyx_t_11);
+    if (PyDict_SetItem(__pyx_t_12, __pyx_n_s_dtype, __pyx_t_11) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+    __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_14, __pyx_t_13, __pyx_t_12); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __Pyx_GOTREF(__pyx_t_11);
     __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
     __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    if (!(likely(((__pyx_t_11) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_11, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+    if (!(likely(((__pyx_t_11) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_11, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     __pyx_t_9 = ((PyArrayObject *)__pyx_t_11);
     {
       __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -1933,18 +1966,18 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_final.diminfo[0].strides = __pyx_pybuffernd_final.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_final.diminfo[0].shape = __pyx_pybuffernd_final.rcbuffer->pybuffer.shape[0];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 134; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 143; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_9 = 0;
     __pyx_v_final = ((PyArrayObject *)__pyx_t_11);
     __pyx_t_11 = 0;
 
-    /* "buhmm/counts.pyx":135
- *         counts = np.zeros((n,n,k), dtype=int)
- *         final = np.zeros(n, dtype=int)
+    /* "buhmm/counts.pyx":144
+ *         counts = np.zeros((n,n,k), dtype=ITYPE)
+ *         final = np.zeros(n, dtype=ITYPE)
  *         node_paths = None             # <<<<<<<<<<<<<<
  *         if node_path:
- *             node_paths = np.zeros((n,L+1), dtype=int)
+ *             node_paths = np.zeros((n,L+1), dtype=ITYPE)
  */
     __pyx_t_10 = ((PyArrayObject *)Py_None);
     {
@@ -1961,39 +1994,39 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
         }
       }
       __pyx_pybuffernd_node_paths.diminfo[0].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_node_paths.diminfo[0].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_node_paths.diminfo[1].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_node_paths.diminfo[1].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[1];
-      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 135; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 144; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
     }
     __pyx_t_10 = 0;
     __Pyx_INCREF(Py_None);
     __pyx_v_node_paths = ((PyArrayObject *)Py_None);
 
-    /* "buhmm/counts.pyx":136
- *         final = np.zeros(n, dtype=int)
+    /* "buhmm/counts.pyx":145
+ *         final = np.zeros(n, dtype=ITYPE)
  *         node_paths = None
  *         if node_path:             # <<<<<<<<<<<<<<
- *             node_paths = np.zeros((n,L+1), dtype=int)
+ *             node_paths = np.zeros((n,L+1), dtype=ITYPE)
  * 
  */
     __pyx_t_2 = (__pyx_v_node_path != 0);
     if (__pyx_t_2) {
 
-      /* "buhmm/counts.pyx":137
+      /* "buhmm/counts.pyx":146
  *         node_paths = None
  *         if node_path:
- *             node_paths = np.zeros((n,L+1), dtype=int)             # <<<<<<<<<<<<<<
+ *             node_paths = np.zeros((n,L+1), dtype=ITYPE)             # <<<<<<<<<<<<<<
  * 
- *     for initialNode in range(n):
+ *     if not from_final:
  */
-      __pyx_t_11 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_11 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_11);
-      __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_zeros); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_11, __pyx_n_s_zeros); if (unlikely(!__pyx_t_12)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-      __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_n); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_11);
-      __pyx_t_13 = __Pyx_PyInt_From_long((__pyx_v_L + 1)); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_13 = __Pyx_PyInt_From_long((__pyx_v_L + 1)); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_13);
-      __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_14);
       PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_11);
       __Pyx_GIVEREF(__pyx_t_11);
@@ -2001,20 +2034,23 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
       __Pyx_GIVEREF(__pyx_t_13);
       __pyx_t_11 = 0;
       __pyx_t_13 = 0;
-      __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_13);
       PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_14);
       __Pyx_GIVEREF(__pyx_t_14);
       __pyx_t_14 = 0;
-      __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_14);
-      if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, ((PyObject *)((PyObject*)(&PyInt_Type)))) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
-      __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __pyx_t_11 = __Pyx_GetModuleGlobalName(__pyx_n_s_ITYPE); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_GOTREF(__pyx_t_11);
+      if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, __pyx_t_11) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+      __pyx_t_11 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __Pyx_GOTREF(__pyx_t_11);
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
       __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-      if (!(likely(((__pyx_t_11) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_11, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+      if (!(likely(((__pyx_t_11) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_11, __pyx_ptype_5numpy_ndarray))))) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       __pyx_t_10 = ((PyArrayObject *)__pyx_t_11);
       {
         __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -2030,7 +2066,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
           }
         }
         __pyx_pybuffernd_node_paths.diminfo[0].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_node_paths.diminfo[0].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_node_paths.diminfo[1].strides = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_node_paths.diminfo[1].shape = __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.shape[1];
-        if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 137; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+        if (unlikely(__pyx_t_5 < 0)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 146; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
       }
       __pyx_t_10 = 0;
       __Pyx_DECREF_SET(__pyx_v_node_paths, ((PyArrayObject *)__pyx_t_11));
@@ -2041,28 +2077,84 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   }
   __pyx_L3:;
 
-  /* "buhmm/counts.pyx":139
- *             node_paths = np.zeros((n,L+1), dtype=int)
+  /* "buhmm/counts.pyx":148
+ *             node_paths = np.zeros((n,L+1), dtype=ITYPE)
+ * 
+ *     if not from_final:             # <<<<<<<<<<<<<<
+ *         for initialNode in range(n):
+ *             final[initialNode] = initialNode
+ */
+  __pyx_t_2 = ((!(__pyx_v_from_final != 0)) != 0);
+  if (__pyx_t_2) {
+
+    /* "buhmm/counts.pyx":149
+ * 
+ *     if not from_final:
+ *         for initialNode in range(n):             # <<<<<<<<<<<<<<
+ *             final[initialNode] = initialNode
+ * 
+ */
+    __pyx_t_5 = __pyx_v_n;
+    for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_5; __pyx_t_15+=1) {
+      __pyx_v_initialNode = __pyx_t_15;
+
+      /* "buhmm/counts.pyx":150
+ *     if not from_final:
+ *         for initialNode in range(n):
+ *             final[initialNode] = initialNode             # <<<<<<<<<<<<<<
+ * 
+ *     for initialNode in range(n):
+ */
+      __pyx_t_16 = __pyx_v_initialNode;
+      *__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_final.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_final.diminfo[0].strides) = __pyx_v_initialNode;
+    }
+    goto __pyx_L5;
+  }
+  __pyx_L5:;
+
+  /* "buhmm/counts.pyx":152
+ *             final[initialNode] = initialNode
  * 
  *     for initialNode in range(n):             # <<<<<<<<<<<<<<
  * 
- *         currentNode = initialNode
+ *         currentNode = final[initialNode]
  */
   __pyx_t_5 = __pyx_v_n;
   for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_5; __pyx_t_15+=1) {
     __pyx_v_initialNode = __pyx_t_15;
 
-    /* "buhmm/counts.pyx":141
+    /* "buhmm/counts.pyx":154
  *     for initialNode in range(n):
  * 
- *         currentNode = initialNode             # <<<<<<<<<<<<<<
+ *         currentNode = final[initialNode]             # <<<<<<<<<<<<<<
+ *         if currentNode == -1:
+ *             # Invalid initial node (from previous calls)
+ */
+    __pyx_t_17 = __pyx_v_initialNode;
+    __pyx_v_currentNode = (*__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_final.rcbuffer->pybuffer.buf, __pyx_t_17, __pyx_pybuffernd_final.diminfo[0].strides));
+
+    /* "buhmm/counts.pyx":155
+ * 
+ *         currentNode = final[initialNode]
+ *         if currentNode == -1:             # <<<<<<<<<<<<<<
+ *             # Invalid initial node (from previous calls)
+ *             break
+ */
+    __pyx_t_2 = ((__pyx_v_currentNode == -1) != 0);
+    if (__pyx_t_2) {
+
+      /* "buhmm/counts.pyx":157
+ *         if currentNode == -1:
+ *             # Invalid initial node (from previous calls)
+ *             break             # <<<<<<<<<<<<<<
  * 
  *         if node_path:
  */
-    __pyx_v_currentNode = __pyx_v_initialNode;
+      goto __pyx_L9_break;
+    }
 
-    /* "buhmm/counts.pyx":143
- *         currentNode = initialNode
+    /* "buhmm/counts.pyx":159
+ *             break
  * 
  *         if node_path:             # <<<<<<<<<<<<<<
  *             # Set the first node in the node path, before seeing any symbols.
@@ -2071,65 +2163,65 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
     __pyx_t_2 = (__pyx_v_node_path != 0);
     if (__pyx_t_2) {
 
-      /* "buhmm/counts.pyx":145
+      /* "buhmm/counts.pyx":161
  *         if node_path:
  *             # Set the first node in the node path, before seeing any symbols.
  *             node_paths[initialNode, 0] = currentNode             # <<<<<<<<<<<<<<
  * 
  *         for i in range(L):
  */
-      __pyx_t_16 = __pyx_v_initialNode;
-      __pyx_t_17 = 0;
-      *__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_node_paths.diminfo[0].strides, __pyx_t_17, __pyx_pybuffernd_node_paths.diminfo[1].strides) = __pyx_v_currentNode;
-      goto __pyx_L7;
+      __pyx_t_18 = __pyx_v_initialNode;
+      __pyx_t_19 = 0;
+      *__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_node_paths.diminfo[0].strides, __pyx_t_19, __pyx_pybuffernd_node_paths.diminfo[1].strides) = __pyx_v_currentNode;
+      goto __pyx_L11;
     }
-    __pyx_L7:;
+    __pyx_L11:;
 
-    /* "buhmm/counts.pyx":147
+    /* "buhmm/counts.pyx":163
  *             node_paths[initialNode, 0] = currentNode
  * 
  *         for i in range(L):             # <<<<<<<<<<<<<<
  *             symbol = data[i]
  *             counts[initialNode, currentNode, symbol] += 1
  */
-    __pyx_t_18 = __pyx_v_L;
-    for (__pyx_t_19 = 0; __pyx_t_19 < __pyx_t_18; __pyx_t_19+=1) {
-      __pyx_v_i = __pyx_t_19;
+    __pyx_t_20 = __pyx_v_L;
+    for (__pyx_t_21 = 0; __pyx_t_21 < __pyx_t_20; __pyx_t_21+=1) {
+      __pyx_v_i = __pyx_t_21;
 
-      /* "buhmm/counts.pyx":148
+      /* "buhmm/counts.pyx":164
  * 
  *         for i in range(L):
  *             symbol = data[i]             # <<<<<<<<<<<<<<
  *             counts[initialNode, currentNode, symbol] += 1
  *             currentNode = tmatrix[currentNode, symbol]
  */
-      __pyx_t_20 = __pyx_v_i;
-      __pyx_v_symbol = (*__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_data.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_data.diminfo[0].strides));
+      __pyx_t_22 = __pyx_v_i;
+      __pyx_v_symbol = (*__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_data.rcbuffer->pybuffer.buf, __pyx_t_22, __pyx_pybuffernd_data.diminfo[0].strides));
 
-      /* "buhmm/counts.pyx":149
+      /* "buhmm/counts.pyx":165
  *         for i in range(L):
  *             symbol = data[i]
  *             counts[initialNode, currentNode, symbol] += 1             # <<<<<<<<<<<<<<
  *             currentNode = tmatrix[currentNode, symbol]
  * 
  */
-      __pyx_t_21 = __pyx_v_initialNode;
-      __pyx_t_22 = __pyx_v_currentNode;
-      __pyx_t_23 = __pyx_v_symbol;
-      *__Pyx_BufPtrCContig3d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_counts.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_counts.diminfo[0].strides, __pyx_t_22, __pyx_pybuffernd_counts.diminfo[1].strides, __pyx_t_23, __pyx_pybuffernd_counts.diminfo[2].strides) += 1;
+      __pyx_t_23 = __pyx_v_initialNode;
+      __pyx_t_24 = __pyx_v_currentNode;
+      __pyx_t_25 = __pyx_v_symbol;
+      *__Pyx_BufPtrCContig3d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_counts.rcbuffer->pybuffer.buf, __pyx_t_23, __pyx_pybuffernd_counts.diminfo[0].strides, __pyx_t_24, __pyx_pybuffernd_counts.diminfo[1].strides, __pyx_t_25, __pyx_pybuffernd_counts.diminfo[2].strides) += 1;
 
-      /* "buhmm/counts.pyx":150
+      /* "buhmm/counts.pyx":166
  *             symbol = data[i]
  *             counts[initialNode, currentNode, symbol] += 1
  *             currentNode = tmatrix[currentNode, symbol]             # <<<<<<<<<<<<<<
  * 
  *             if node_path:
  */
-      __pyx_t_24 = __pyx_v_currentNode;
-      __pyx_t_25 = __pyx_v_symbol;
-      __pyx_v_currentNode = (*__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.buf, __pyx_t_24, __pyx_pybuffernd_tmatrix.diminfo[0].strides, __pyx_t_25, __pyx_pybuffernd_tmatrix.diminfo[1].strides));
+      __pyx_t_26 = __pyx_v_currentNode;
+      __pyx_t_27 = __pyx_v_symbol;
+      __pyx_v_currentNode = (*__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_tmatrix.rcbuffer->pybuffer.buf, __pyx_t_26, __pyx_pybuffernd_tmatrix.diminfo[0].strides, __pyx_t_27, __pyx_pybuffernd_tmatrix.diminfo[1].strides));
 
-      /* "buhmm/counts.pyx":152
+      /* "buhmm/counts.pyx":168
  *             currentNode = tmatrix[currentNode, symbol]
  * 
  *             if node_path:             # <<<<<<<<<<<<<<
@@ -2139,21 +2231,21 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
       __pyx_t_2 = (__pyx_v_node_path != 0);
       if (__pyx_t_2) {
 
-        /* "buhmm/counts.pyx":153
+        /* "buhmm/counts.pyx":169
  * 
  *             if node_path:
  *                 node_paths[initialNode, i+1] = currentNode             # <<<<<<<<<<<<<<
  * 
  *             if currentNode == -1:
  */
-        __pyx_t_26 = __pyx_v_initialNode;
-        __pyx_t_27 = (__pyx_v_i + 1);
-        *__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.buf, __pyx_t_26, __pyx_pybuffernd_node_paths.diminfo[0].strides, __pyx_t_27, __pyx_pybuffernd_node_paths.diminfo[1].strides) = __pyx_v_currentNode;
-        goto __pyx_L10;
+        __pyx_t_28 = __pyx_v_initialNode;
+        __pyx_t_29 = (__pyx_v_i + 1);
+        *__Pyx_BufPtrCContig2d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_node_paths.rcbuffer->pybuffer.buf, __pyx_t_28, __pyx_pybuffernd_node_paths.diminfo[0].strides, __pyx_t_29, __pyx_pybuffernd_node_paths.diminfo[1].strides) = __pyx_v_currentNode;
+        goto __pyx_L14;
       }
-      __pyx_L10:;
+      __pyx_L14:;
 
-      /* "buhmm/counts.pyx":155
+      /* "buhmm/counts.pyx":171
  *                 node_paths[initialNode, i+1] = currentNode
  * 
  *             if currentNode == -1:             # <<<<<<<<<<<<<<
@@ -2163,36 +2255,37 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
       __pyx_t_2 = ((__pyx_v_currentNode == -1) != 0);
       if (__pyx_t_2) {
 
-        /* "buhmm/counts.pyx":157
+        /* "buhmm/counts.pyx":173
  *             if currentNode == -1:
  *                 # Transition is forbidden.
  *                 break             # <<<<<<<<<<<<<<
  * 
  *         # Mark final node, possibly equal to -1.
  */
-        goto __pyx_L9_break;
+        goto __pyx_L13_break;
       }
     }
-    __pyx_L9_break:;
+    __pyx_L13_break:;
 
-    /* "buhmm/counts.pyx":160
+    /* "buhmm/counts.pyx":176
  * 
  *         # Mark final node, possibly equal to -1.
  *         final[initialNode] = currentNode             # <<<<<<<<<<<<<<
  * 
  *     return counts, final, node_paths
  */
-    __pyx_t_18 = __pyx_v_initialNode;
-    *__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_final.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_final.diminfo[0].strides) = __pyx_v_currentNode;
+    __pyx_t_20 = __pyx_v_initialNode;
+    *__Pyx_BufPtrCContig1d(__pyx_t_5buhmm_6counts_ITYPE_t *, __pyx_pybuffernd_final.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_final.diminfo[0].strides) = __pyx_v_currentNode;
   }
+  __pyx_L9_break:;
 
-  /* "buhmm/counts.pyx":162
+  /* "buhmm/counts.pyx":178
  *         final[initialNode] = currentNode
  * 
  *     return counts, final, node_paths             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_11 = PyTuple_New(3); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 162; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_11 = PyTuple_New(3); if (unlikely(!__pyx_t_11)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 178; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_11);
   __Pyx_INCREF(((PyObject *)__pyx_v_counts));
   PyTuple_SET_ITEM(__pyx_t_11, 0, ((PyObject *)__pyx_v_counts));
@@ -2207,7 +2300,7 @@ static PyObject *__pyx_pf_5buhmm_6counts_2path_counts(CYTHON_UNUSED PyObject *__
   __pyx_t_11 = 0;
   goto __pyx_L0;
 
-  /* "buhmm/counts.pyx":60
+  /* "buhmm/counts.pyx":61
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,             # <<<<<<<<<<<<<<
@@ -4295,6 +4388,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_n_s_all, __pyx_k_all, sizeof(__pyx_k_all), 0, 0, 1, 1},
+  {&__pyx_n_s_arange, __pyx_k_arange, sizeof(__pyx_k_arange), 0, 0, 1, 1},
   {&__pyx_n_s_bool, __pyx_k_bool, sizeof(__pyx_k_bool), 0, 0, 1, 1},
   {&__pyx_n_s_buhmm_counts, __pyx_k_buhmm_counts, sizeof(__pyx_k_buhmm_counts), 0, 0, 1, 1},
   {&__pyx_n_s_counts, __pyx_k_counts, sizeof(__pyx_k_counts), 0, 0, 1, 1},
@@ -4302,6 +4396,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_data, __pyx_k_data, sizeof(__pyx_k_data), 0, 0, 1, 1},
   {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
   {&__pyx_n_s_final, __pyx_k_final, sizeof(__pyx_k_final), 0, 0, 1, 1},
+  {&__pyx_n_s_from_final, __pyx_k_from_final, sizeof(__pyx_k_from_final), 0, 0, 1, 1},
   {&__pyx_kp_s_home_ellisocj_Development_git_b, __pyx_k_home_ellisocj_Development_git_b, sizeof(__pyx_k_home_ellisocj_Development_git_b), 0, 0, 1, 0},
   {&__pyx_n_s_i, __pyx_k_i, sizeof(__pyx_k_i), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
@@ -4318,7 +4413,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_numpy, __pyx_k_numpy, sizeof(__pyx_k_numpy), 0, 0, 1, 1},
   {&__pyx_n_s_out_arrays, __pyx_k_out_arrays, sizeof(__pyx_k_out_arrays), 0, 0, 1, 1},
   {&__pyx_n_s_path_counts, __pyx_k_path_counts, sizeof(__pyx_k_path_counts), 0, 0, 1, 1},
-  {&__pyx_kp_u_path_counts_line_60, __pyx_k_path_counts_line_60, sizeof(__pyx_k_path_counts_line_60), 0, 1, 0, 0},
+  {&__pyx_kp_u_path_counts_line_61, __pyx_k_path_counts_line_61, sizeof(__pyx_k_path_counts_line_61), 0, 1, 0, 0},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
   {&__pyx_n_s_symbol, __pyx_k_symbol, sizeof(__pyx_k_symbol), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
@@ -4328,7 +4423,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 139; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 149; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 215; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) {__pyx_filename = __pyx_f[1]; __pyx_lineno = 799; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   return 0;
@@ -4418,17 +4513,17 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__7);
   __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(4, 0, 7, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_ellisocj_Development_git_b, __pyx_n_s_out_arrays, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
 
-  /* "buhmm/counts.pyx":60
+  /* "buhmm/counts.pyx":61
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,             # <<<<<<<<<<<<<<
  *                 np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
  *                 BTYPE_t node_path=False,
  */
-  __pyx_tuple__9 = PyTuple_Pack(14, __pyx_n_s_tmatrix, __pyx_n_s_data, __pyx_n_s_node_path, __pyx_n_s_out_arrays, __pyx_n_s_initialNode, __pyx_n_s_currentNode, __pyx_n_s_symbol, __pyx_n_s_i, __pyx_n_s_n, __pyx_n_s_k, __pyx_n_s_L, __pyx_n_s_counts, __pyx_n_s_final, __pyx_n_s_node_paths); if (unlikely(!__pyx_tuple__9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_tuple__9 = PyTuple_Pack(15, __pyx_n_s_tmatrix, __pyx_n_s_data, __pyx_n_s_node_path, __pyx_n_s_out_arrays, __pyx_n_s_from_final, __pyx_n_s_initialNode, __pyx_n_s_currentNode, __pyx_n_s_symbol, __pyx_n_s_i, __pyx_n_s_n, __pyx_n_s_k, __pyx_n_s_L, __pyx_n_s_counts, __pyx_n_s_final, __pyx_n_s_node_paths); if (unlikely(!__pyx_tuple__9)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
-  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(4, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_ellisocj_Development_git_b, __pyx_n_s_path_counts, 60, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(5, 0, 15, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_ellisocj_Development_git_b, __pyx_n_s_path_counts, 61, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -4614,16 +4709,16 @@ PyMODINIT_FUNC PyInit_counts(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_out_arrays, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 25; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "buhmm/counts.pyx":60
+  /* "buhmm/counts.pyx":61
  * @cython.boundscheck(False)
  * @cython.wraparound(False)
  * def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,             # <<<<<<<<<<<<<<
  *                 np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
  *                 BTYPE_t node_path=False,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5buhmm_6counts_3path_counts, NULL, __pyx_n_s_buhmm_counts); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5buhmm_6counts_3path_counts, NULL, __pyx_n_s_buhmm_counts); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_path_counts, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 60; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_path_counts, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 61; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "buhmm/counts.pyx":1
@@ -4633,7 +4728,7 @@ PyMODINIT_FUNC PyInit_counts(void)
  */
   __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_path_counts_line_60, __pyx_kp_u_Calculates_edge_counts_final_no) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
+  if (PyDict_SetItem(__pyx_t_1, __pyx_kp_u_path_counts_line_61, __pyx_kp_u_Calculates_edge_counts_final_no) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 1; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 

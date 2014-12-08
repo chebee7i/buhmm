@@ -49,18 +49,20 @@ def out_arrays(n, k, L, node_path=False):
 
     """
     counts = np.zeros((n,n,k), dtype=int)
-    final = np.zeros(n, dtype=int)
+    final = np.arange(n, dtype=int)
     node_paths = None
     if node_path:
         node_paths = np.zeros((n,L+1), dtype=int)
     return counts, final, node_paths
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
                 np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
                 BTYPE_t node_path=False,
-                out_arrays=None):
+                out_arrays=None,
+                BTYPE_t from_final=False):
     """
     Calculates edge counts, final nodes, and node paths from data.
 
@@ -86,6 +88,13 @@ def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
         number of nodes and symbols, and if `node_path` is `True`, also
         the same amount of data. If `node_path` is `False`, then the 3rd
         element can be `None`.
+    from_final : bool
+        When `True`, it specifies that counts should continue from a previous
+        iteration's final nodes. In order to do this `out_arrays` must be
+        provided. In that case, we use the values of `final` to initiate the
+        current node for each initial node. Any element with the value of -1
+        will designate the initial node as invalid. If `False`, then `final`
+        is initialized to consecutive integers beginning from zero.
 
     Returns
     -------
@@ -130,15 +139,22 @@ def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
         final = out_arrays[1]
         node_paths = out_arrays[2]
     else:
-        counts = np.zeros((n,n,k), dtype=int)
-        final = np.zeros(n, dtype=int)
+        counts = np.zeros((n,n,k), dtype=ITYPE)
+        final = np.zeros(n, dtype=ITYPE)
         node_paths = None
         if node_path:
-            node_paths = np.zeros((n,L+1), dtype=int)
+            node_paths = np.zeros((n,L+1), dtype=ITYPE)
+
+    if not from_final:
+        for initialNode in range(n):
+            final[initialNode] = initialNode
 
     for initialNode in range(n):
 
-        currentNode = initialNode
+        currentNode = final[initialNode]
+        if currentNode == -1:
+            # Invalid initial node (from previous calls)
+            break
 
         if node_path:
             # Set the first node in the node path, before seeing any symbols.
