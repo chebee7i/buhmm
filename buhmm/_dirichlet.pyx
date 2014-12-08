@@ -56,6 +56,8 @@ from __future__ import division
 import cython
 cimport cython
 
+from math import copysign
+
 import numpy as np
 cimport numpy as np
 from numpy.math cimport INFINITY, LOGE2
@@ -66,7 +68,7 @@ from scipy.special import gammaln
 
 from copy import deepcopy
 
-from .counts import path_counts
+from .counts import path_counts, out_arrays as out_arrays_func
 from .exceptions import InvalidInitialNode
 
 from itertools import product
@@ -90,11 +92,13 @@ cdef _log_evidence(
         int nEdges, int nNodes,
         ITYPE_t[:] final_node,
         ITYPE_t[:, :] edges,
-        FTYPE_t[:, :, :] edge_alphas,
-        FTYPE_t[:, :, :] edge_counts,
-        FTYPE_t[:, :] node_alphas,
-        FTYPE_t[:, :] node_counts,
-        FTYPE_t[:, :] temp):
+        ITYPE_t[:, :, :] edge_alphas,
+        ITYPE_t[:, :, :] edge_counts,
+        ITYPE_t[:, :] node_alphas,
+        ITYPE_t[:, :] node_counts,
+        # Using the NumPy declaration allows us to call NumPy functions on it.
+        np.ndarray[FTYPE_t, ndim=2] temp):
+        #FTYPE_t[:, :] temp):
     """
     C-level function to calculate the evidence.
 
@@ -139,17 +143,12 @@ cdef _log_evidence(
             temp[one, i + nEdges] = node_alphas[initial_node, i] + \
                                   node_counts[initial_node, i]
 
-
-        temp_ = np.asarray(temp)
-        gammaln(temp_, temp_)
-        temp_ *= -1
-        log_evid = temp_.sum()
+        gammaln(temp, temp)
+        temp *= -1
+        log_evid = temp.sum()
 
     # Return base-2 logarithms.
-
     return log_evid / LOGE2
-
-
 
 class DirichletDistribution(object):
     """
@@ -185,7 +184,7 @@ class DirichletDistribution(object):
 
     _temp = None
 
-    def __init__(self, tmatrix, data=None, node_path=False, prng=None, out_arrays=None):
+    def __init__(self, tmatrix, data=None, FTYPE_t mutation_rate=0, node_path=False, prng=None, out_arrays=None):
                  #np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
                  #np.ndarray[ITYPE_t, ndim=1, mode="c"] data,
                  #BTYPE_t node_path=False,
@@ -197,6 +196,8 @@ class DirichletDistribution(object):
         #   L        : length of data
         #   nInitial : number of valid initial nodes
         #   nEdges   : number of edges
+
+
 
         if prng is None:
             prng = np.random.RandomState()
@@ -220,52 +221,52 @@ class DirichletDistribution(object):
         # Not strictly necessary since the nodes are integers from zero.
         self.nodes = np.arange(tmatrix.shape[0])
 
+        # Basic attributes
+        self.nNodes = nNodes = tmatrix.shape[0]
+        self.nSymbols = nSymbols = tmatrix.shape[1]
+        self.nEdges = self.edges.shape[0]
+        self.mutation_rate = abs(mutation_rate)
+        self.mutation_sign = int(copysign(1, mutation_rate))
+
         # shape: (k,)
         # axes: (symbol,)
         self.symbols = np.arange(tmatrix.shape[1])
 
-        counts, final, node_paths = path_counts(tmatrix, data,
-                                                node_path, out_arrays)
+        counts, final, node_paths = out_arrays_func(nNodes,
+                                                    nSymbols,
+                                                    len(data),
+                                                    node_path=node_path)
 
         # shape: (n, n, k)
         # axes: (initialNode, node, symbol)
-        # Use float to support average counts.
-        self.edge_counts = counts.astype(float)
-
-        # shape: (n, n, k)
-        # axes: (initialNode, node, symbol)
-        # Start with uniform prior.
-        self.edge_alphas = np.zeros(counts.shape, dtype=float) + 1
-
-        self._update_node_alphacounts()
+        self.edge_counts = counts
 
         # shape: (n,)
         # axes: (initial node,)
         # Each element is the final node.
         self.final_node = final
 
-        # shape: (nInitial,)
-        # axes: (initial node,)
-        # Each element is a valid initial node.
-        self.valid_initial_nodes = np.array(np.nonzero(final != -1)[0])
-
-        # Eventually, we will need to determine which nodes have edges that
-        # are to be inferred. Presently, this is every node since we cannot
-        # have fixed edges with this algorithm. This will affect self.temp.
-
         # shape: (nNodes, L+1)
         # axes: (initialNode, time)
         self.node_paths = node_paths
+
+        # shape: (n, n, k)
+        # axes: (initialNode, node, symbol)
+        # Start with uniform prior.
+        self.edge_alphas = np.zeros(counts.shape, dtype=ITYPE) + 1
+
+        # Now add counts, and update various parts the class.
+        self.add_counts_from(data)
+
+        # Eventually, we will need to determine which nodes have edges that
+        # are to be inferred. Presently, this is every node (even those with
+        # only one outgoing edge) since we cannot have fixed edges with this
+        # algorithm. When this changes, self.temp will need to change too.
 
         # The first row is for numerator terms
         # The second row is for denominator terms
         shape = (2, len(self.edges) + len(self.nodes))
         self._temp = np.empty(shape, dtype=float)
-
-        self.nNodes = tmatrix.shape[0]
-        self.nSymbols = tmatrix.shape[1]
-        self.nInitial = len(self.valid_initial_nodes)
-        self.nEdges = self.edges.shape[0]
 
     def _update_node_alphacounts(self, alpha=True, counts=True):
         """
@@ -311,22 +312,58 @@ class DirichletDistribution(object):
         if counts:
             self.node_counts = self.edge_counts.sum(axis=2)
 
-    def add_counts_from(self, data):
+    def add_counts_from(self, data, prng=None):
         """
         Adds additional counts from `data`.
 
         """
         # For each symbol, add the count and update the final node.
+        # Not that you can have up to one count on a forbidden edge. At that
+        # point, the initial node that led to that forbidden is removed
+        # from consideration. So we only continue to add counts for valid
+        # initial nodes. You should  not expect the counts for each initial
+        # node to be the same.
+        out_arrays = (self.edge_counts, self.final_node, self.node_paths)
+        node_path = not (self.node_paths is None)
+        path_counts(self.tmatrix, data, node_path, out_arrays, from_final=True)
+        """
         for symbol in data:
             for initial_node in self.valid_initial_nodes:
                 final_node = self.final_node[initial_node]
                 self.final_node[initial_node] = self.tmatrix[final_node, symbol]
                 self.edge_counts[initial_node, final_node, symbol] += 1
-                self.valid_initial_nodes = np.array(np.nonzero(self.final_node != -1)[0])
+                condition = self.final_node != -1
+                self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
+
+        """
+
+        # shape: (nInitial,)
+        # axes: (initial node,)
+        # Each element is a valid initial node.
+        condition = self.final_node != -1
+        self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
+
+        # Required for mutations.
+        self.nInitial = len(self.valid_initial_nodes)
+
+        # When it comes to mutations, we only need to mutate the counts for
+        # valid initial nodes.
+
+        if self.mutation_rate and len(data):
+            condition = self.final_node != -1
+            if prng is None:
+                prng = self.prng
+
+            shape = (self.nInitial, self.nNodes, self.nSymbols)
+            counts = prng.binomial(len(data), self.mutation_rate, shape)
+            counts[:, ~self.tmatrix_bool] = 0
+            self.edge_counts[condition, :, :] += self.mutation_sign * counts
+            if self.mutation_sign < 0:
+                negative = self.edge_counts[condition, :, :] < 0
+                self.edge_counts[negative] = 0
 
         self._update_node_alphacounts()
 
-    @cython.boundscheck(False)
     def log_evidence(self, unsigned int initial_node):
         return _log_evidence(initial_node,
                             self.nEdges, self.nNodes,
@@ -337,90 +374,6 @@ class DirichletDistribution(object):
                             self.node_alphas,
                             self.node_counts,
                             self._temp)
-
-    '''
-    @cython.boundscheck(False)
-    def log_evidence(self, unsigned int initial_node):
-        """
-        Returns the log evidence of the data using `node` as the initial node.
-
-        Parameters
-        ----------
-        initial_node : int
-            An initial node.
-
-        Returns
-        -------
-        log_evid : float
-            The base-2 log evidence of the data given the initial node. When
-            its value is -inf, then it is not possible to generate the given
-            data from the initial node. When its value is 0, then the given
-            data is the only possible data that could be generated from the
-            initial node.
-
-        """
-        from scipy.special import gammaln
-
-        cdef unsigned int i, u, x
-        cdef FTYPE_t log_evid
-
-        cdef int nEdges = self.nEdges
-        cdef int nNodes = self.nNodes
-        cdef FTYPE_t inf = np.inf
-
-
-        cdef np.ndarray[ITYPE_t, ndim=1] final_node = self.final_node
-        cdef np.ndarray[ITYPE_t, ndim=2] edges = self.edges
-
-        cdef np.ndarray[FTYPE_t, ndim=3] ealphas = self.edge_alphas
-        cdef np.ndarray[FTYPE_t, ndim=3] ecounts = self.edge_counts
-        cdef np.ndarray[FTYPE_t, ndim=2] nalphas = self.node_alphas
-        cdef np.ndarray[FTYPE_t, ndim=2] ncounts = self.node_counts
-
-        # shape: (2, nEdges + nNodes)
-        cdef np.ndarray[FTYPE_t, ndim=2] temp = self._temp
-
-        if final_node[initial_node] == -1:
-            # Then the data cannot be generated by this node.
-            #
-            # The form we use for the likelihood is valid only if the
-            # probability of the data is nonzero. The reason is that it
-            # requires edge counts for every edge, and we only obtain counts on
-            # allowed edges. We could, alternatively, work with complete DFAs,
-            # and then we *would* have counts for transitions following a
-            # forbidden transition. In this case, the transition matrix would
-            # have zero entries equal to -1 and one of the states would be the
-            # garbage state. But this doesn't work for other reasons. See the
-            # module docstring.
-            log_evid = -inf
-
-        else:
-            # It is no problem to iterate through nodes which only have
-            # one edge, since the edge and node counts/alphas will cancel out.
-            # Once we allow nodes with fixed probs, we will need to iterate
-            # only through inferred edges and nodes with inferred edges.
-
-            # Now iterate through every edge (u, x)
-            for i in range(nEdges):
-                u = edges[i, 0]
-                x = edges[i, 1]
-                temp[0, i] = ealphas[initial_node, u, x] + \
-                             ecounts[initial_node, u, x]
-                temp[1, i] = ealphas[initial_node, u, x]
-
-            # Similarly, iterate through every node (u, *)
-            for i in range(nNodes):
-                temp[0, i + nEdges] = nalphas[initial_node, i]
-                temp[1, i + nEdges] = nalphas[initial_node, i] + \
-                                      ncounts[initial_node, i]
-
-            gammaln(temp, temp)
-            #temp[1] *= -1
-            log_evid = temp.sum()
-
-        # Return base-2 logarithms.
-        return log_evid / np.NPY_LOGE2
-    '''
 
     def log_evidence_array(self):
         """
@@ -845,7 +798,7 @@ class Infer(object):
     _symboldist_class = dit.ScalarDistribution
     _posterior_class = DirichletDistribution
 
-    def __init__(self, tmatrix, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None):
+    def __init__(self, tmatrix, data=None, inode_prior=None, mutation_rate=0, node_path=False, prng=None, out_arrays=None, options=None):
         """
         inode_prior is the initial node prior distribution.
 
@@ -863,7 +816,11 @@ class Infer(object):
         self.prng = prng
 
         self.posterior = self._posterior_class(
-            tmatrix, data, node_path, self.prng, out_arrays
+            tmatrix, data,
+            mutation_rate=mutation_rate,
+            node_path=node_path,
+            prng=self.prng,
+            out_arrays=out_arrays,
         )
 
         self._inode_init(inode_prior)
@@ -901,7 +858,7 @@ class Infer(object):
                 raise Exception(msg)
 
         # There is no reason to make it sparse, except to match the posterior.
-        inode_prior.make_sparse()
+        #inode_prior.make_sparse()
         self.inode_prior = inode_prior
 
         #
@@ -925,7 +882,7 @@ class Infer(object):
         nodes = self.posterior.nodes
         d = self._nodedist_class(nodes, p_sgx, base=base, sort=False)
         d.set_base('linear')
-        d.make_sparse()
+        #d.make_sparse()
         self.inode_posterior = d
 
     def _fnode_init(self):
@@ -946,7 +903,7 @@ class Infer(object):
 
         nodes = self.posterior.nodes
         d = self._nodedist_class(nodes, pmf, base='linear', validate=False)
-        d.make_sparse()
+        #d.make_sparse()
         self.fnode_dist = d
 
     def add_counts_from(self, data):
@@ -1028,7 +985,7 @@ class Infer(object):
         pmf = probs.sum(axis=0)
 
         d = self._symboldist_class(self.posterior.symbols, pmf)
-        d.make_sparse()
+        #d.make_sparse()
         return d
 
     def log_evidence(self, initial_node=None):

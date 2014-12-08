@@ -73,7 +73,7 @@ class DirichletDistribution(object):
     _node_index = None
     _symbol_index = None
 
-    def __init__(self, machine, data=None, node_path=False, prng=None, out_arrays=None, verify=True):
+    def __init__(self, machine, data=None, mutation_rate=0, node_path=False, prng=None, out_arrays=None, verify=True):
 
         if not machine.is_unifilar():
             raise NonunifilarException()
@@ -104,7 +104,11 @@ class DirichletDistribution(object):
         self._symbol_index = dict(zip(symbols, range(len(nodes))))
 
         dd = _dirichlet.DirichletDistribution
-        self._dd = dd(delta, data, node_path, prng, out_arrays)
+        self._dd = dd(delta, data,
+                        mutation_rate=mutation_rate,
+                        node_path=node_path,
+                        prng=prng,
+                        out_arrays=out_arrays)
 
         self._post_init(self)
 
@@ -346,7 +350,7 @@ class Infer(_dirichlet.Infer):
     """
     _posterior_class = DirichletDistribution
 
-    def __init__(self, machine, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None):
+    def __init__(self, machine, data=None, inode_prior=None, mutation_rate=0, node_path=False, prng=None, out_arrays=None, options=None):
 
         if data is None:
             data = []
@@ -356,7 +360,12 @@ class Infer(_dirichlet.Infer):
             data = map(tuple, data)
 
         cls = super(Infer, self)
-        cls.__init__(machine, data, inode_prior, node_path, prng, out_arrays, options)
+        cls.__init__(machine, data, inode_prior,
+            mutation_rate=mutation_rate,
+            node_path=node_path,
+            prng=prng,
+            out_arrays=out_arrays,
+            options=options)
 
         # Update edge counts with typical counts.
 
