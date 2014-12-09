@@ -28,6 +28,11 @@ var/
 *.manifest
 *.spec
 
+# Generated
+buhmm/_dirichlet.c
+buhmm/_counts.c
+
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
