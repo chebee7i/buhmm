@@ -233,10 +233,17 @@ class DirichletDistribution(object):
         # axes: (symbol,)
         self.symbols = np.arange(tmatrix.shape[1])
 
-        counts, final, node_paths = out_arrays_func(nNodes,
-                                                    nSymbols,
-                                                    len(data),
-                                                    node_path=node_path)
+
+        if out_arrays is None:
+            counts, final, node_paths = out_arrays_func(nNodes,
+                                                        nSymbols,
+                                                        len(data),
+                                                        node_path=node_path)
+
+        else:
+            counts, final, node_paths = out_arrays
+            counts *= 0
+            # Final is initialized when we add counts with from_final=False
 
         # shape: (n, n, k)
         # axes: (initialNode, node, symbol)
@@ -257,7 +264,7 @@ class DirichletDistribution(object):
         self.edge_alphas = np.zeros(counts.shape, dtype=ITYPE) + 1
 
         # Now add counts, and update various parts the class.
-        self.add_counts_from(data)
+        self.add_counts_from(data, from_final=False)
 
         # Eventually, we will need to determine which nodes have edges that
         # are to be inferred. Presently, this is every node (even those with
@@ -315,7 +322,7 @@ class DirichletDistribution(object):
         if counts:
             self.node_counts = self.edge_counts.sum(axis=2)
 
-    def add_counts_from(self, data, prng=None):
+    def add_counts_from(self, data, from_final=True, prng=None):
         """
         Adds additional counts from `data`.
 
@@ -328,7 +335,9 @@ class DirichletDistribution(object):
         # node to be the same.
         out_arrays = (self.edge_counts, self.final_node, self.node_paths)
         node_path = not (self.node_paths is None)
-        path_counts(self.tmatrix, data, node_path, out_arrays, from_final=True)
+        path_counts(self.tmatrix, data, node_path, out_arrays,
+                    from_final=from_final)
+
         """
         for symbol in data:
             for initial_node in self.valid_initial_nodes:

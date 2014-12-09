@@ -465,6 +465,16 @@ class Infer(_dirichlet.Infer):
             inode = initial_node
         return self.posterior.pm_machine(inode, trim=trim)
 
+    def get_optimized(self):
+        """
+        Returns an optimized (Cython) Infer instance.
+
+        """
+        return _dirichlet.Infer(self.posterior._dd.tmatrix,
+                                mutation_rate=self.posterior._dd.mutation_rate,
+                                prng=self.prng)
+
+
 class InferCP(Infer):
     _nodedist_class = dit.Distribution
     _symboldist_class = dit.Distribution
@@ -584,9 +594,8 @@ class ModelComparisonPredictive(ModelComparison):
         else:
             ops.mult_inplace(pmf, ops.invert(norm))
 
-        d = dit.ScalarDistribution(pmf, base=base)
+        d = dit.ScalarDistribution(pmf, base=base, sparse=False)
         d.set_base('linear')
-        d.make_dense()
 
         self.model_dist = d
         self.predictive_probabilities = predictive_probabilities
