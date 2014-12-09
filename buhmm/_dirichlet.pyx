@@ -360,10 +360,12 @@ class DirichletDistribution(object):
             shape = (self.nInitial, self.nNodes, self.nSymbols)
             counts = prng.binomial(len(data), self.mutation_rate, shape)
             counts[:, ~self.tmatrix_bool] = 0
-            self.edge_counts[condition, :, :] += self.mutation_sign * counts
+            mutations = self.edge_counts[condition]
+            mutations += self.mutation_sign * counts
             if self.mutation_sign < 0:
-                negative = self.edge_counts[condition, :, :] < 0
-                self.edge_counts[negative] = 0
+                mutations[mutations < 0] = 0
+
+            self.edge_counts[condition] = mutations
 
         self._update_node_alphacounts()
         self.logevid_cache = {}
@@ -1153,6 +1155,10 @@ class Infer(object):
         ------
         InvalidInitialNode
             If `initial_node` is not a valid initial node.
+
+        Notes
+        -----
+        This generalizes the functionality provided by `pm_next_symbol_dist`.
 
         """
         new = self.get_updated_prior()
