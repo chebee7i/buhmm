@@ -198,7 +198,7 @@ class DirichletDistribution(object):
         #   nInitial : number of valid initial nodes
         #   nEdges   : number of edges
 
-
+        self._count_method = 'simple'
 
         if prng is None:
             prng = np.random.RandomState()
@@ -328,26 +328,31 @@ class DirichletDistribution(object):
 
         """
         # For each symbol, add the count and update the final node.
-        # Not that you can have up to one count on a forbidden edge. At that
+        # Note that you can have up to one count on a forbidden edge. At that
         # point, the initial node that led to that forbidden is removed
         # from consideration. So we only continue to add counts for valid
-        # initial nodes. You should  not expect the counts for each initial
+        # initial nodes. You should not expect the counts for each initial
         # node to be the same.
-        out_arrays = (self.edge_counts, self.final_node, self.node_paths)
-        node_path = not (self.node_paths is None)
-        path_counts(self.tmatrix, data, node_path, out_arrays,
-                    from_final=from_final)
 
-        """
-        for symbol in data:
-            for initial_node in self.valid_initial_nodes:
-                final_node = self.final_node[initial_node]
-                self.final_node[initial_node] = self.tmatrix[final_node, symbol]
-                self.edge_counts[initial_node, final_node, symbol] += 1
-                condition = self.final_node != -1
-                self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
 
-        """
+        if self._count_method == 'simple':
+            out_arrays = (self.edge_counts, self.final_node, self.node_paths)
+            node_path = not (self.node_paths is None)
+            path_counts(self.tmatrix, data, node_path, out_arrays,
+                        from_final=from_final)
+
+        else:
+            if not from_final:
+                # Then we are initing. So we need to create valid_initial_nodes
+                self.valid_initial_nodes = self.final_node.copy()
+
+            for symbol in data:
+                for initial_node in self.valid_initial_nodes:
+                    final_node = self.final_node[initial_node]
+                    self.final_node[initial_node] = self.tmatrix[final_node, symbol]
+                    self.edge_counts[initial_node, final_node, symbol] += 1
+                    condition = self.final_node != -1
+                    self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
 
         # shape: (nInitial,)
         # axes: (initial node,)

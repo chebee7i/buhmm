@@ -67,7 +67,16 @@ class TestSmoke:
         m = machines.Even()
         m.prng.seed(0)
         d = m.symbols(100)
+        d_ = ['111111110111100011111111111100111111111',
+              '101111000011110011000011001111111111000',
+              '0000110111101111011111']
+        assert_equal(''.join(d), ''.join(d_))
         x = buhmm.Infer(m, d)
+        edge_counts = np.array([[[29, 36],
+                                 [ 0, 35]],
+                                [[ 0,  4],
+                                 [ 1,  4]]])
+        np.testing.assert_almost_equal(x.posterior._dd.edge_counts, edge_counts)
         evid = x.log_evidence()
         assert_almost_equal(evid, -68.165400496389665)
         pred = x.predictive_probability('1011')
