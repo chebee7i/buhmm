@@ -201,6 +201,7 @@ class DirichletDistribution(object):
 
         self._count_method = 'simple'
         self._nullcount_callback = None
+        self._feedback_factor = 1
 
         if prng is None:
             prng = np.random.RandomState()
@@ -245,7 +246,8 @@ class DirichletDistribution(object):
         else:
             counts, final, node_paths = out_arrays
             counts *= 0
-            # Final is initialized when we add counts with from_final=False
+            # `final` will be initialized when we add counts for the first
+            # time using add_counts_from(... from_final=False)
 
         # shape: (n, n, k)
         # axes: (initialNode, node, symbol)
@@ -417,10 +419,43 @@ class DirichletDistribution(object):
             path_counts(self.tmatrix, data, node_path, out_arrays,
                         from_final=from_final)
 
+            # shape: (nInitial,)
+            # axes: (initial node,)
+            # Each element is a valid initial node.
+            condition = self.final_node != -1
+            self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
+
+            # Required for mutations.
+            self.nInitial = len(self.valid_initial_nodes)
+
+            # When it comes to mutations, we only need to mutate the counts for
+            # valid initial nodes.
+
+            if self.mutation_rate and len(data):
+                condition = self.final_node != -1
+                if prng is None:
+                    prng = self.prng
+
+                shape = (self.nInitial, self.nNodes, self.nSymbols)
+                counts = prng.binomial(len(data), self.mutation_rate, shape)
+                counts[:, ~self.tmatrix_bool] = 0
+                mutations = self.edge_counts[condition]
+                mutations += self.mutation_sign * counts
+                if self.mutation_sign < 0:
+                    mutations[mutations < 0] = 0
+
+                self.edge_counts[condition] = mutations
+
+
         else:
             if not from_final:
                 # Then we are initing. So we need to create valid_initial_nodes
+                ### 2015-02-11: This doesn't seem correct. Certainly, it's
+                ### behavior doesn't match what you get if
+                ### _count_method='simple' and from_final is False.
                 self.valid_initial_nodes = self.final_node.copy()
+
+            #print("Using ff {0} on {1} symbols.".format(self._feedback_factor, len(data)))
 
             for symbol in data:
                 if symbol is None:
@@ -430,36 +465,36 @@ class DirichletDistribution(object):
                 for initial_node in self.valid_initial_nodes:
                     final_node = self.final_node[initial_node]
                     self.final_node[initial_node] = self.tmatrix[final_node, symbol]
-                    self.edge_counts[initial_node, final_node, symbol] += 1
+                    self.edge_counts[initial_node, final_node, symbol] += 1 * self._feedback_factor
                     condition = self.final_node != -1
                     self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
 
-        # shape: (nInitial,)
-        # axes: (initial node,)
-        # Each element is a valid initial node.
-        condition = self.final_node != -1
-        self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
-
-        # Required for mutations.
-        self.nInitial = len(self.valid_initial_nodes)
-
-        # When it comes to mutations, we only need to mutate the counts for
-        # valid initial nodes.
-
-        if self.mutation_rate and len(data):
+            # shape: (nInitial,)
+            # axes: (initial node,)
+            # Each element is a valid initial node.
             condition = self.final_node != -1
-            if prng is None:
-                prng = self.prng
+            self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
 
-            shape = (self.nInitial, self.nNodes, self.nSymbols)
-            counts = prng.binomial(len(data), self.mutation_rate, shape)
-            counts[:, ~self.tmatrix_bool] = 0
-            mutations = self.edge_counts[condition]
-            mutations += self.mutation_sign * counts
-            if self.mutation_sign < 0:
-                mutations[mutations < 0] = 0
+            # Required for mutations.
+            self.nInitial = len(self.valid_initial_nodes)
 
-            self.edge_counts[condition] = mutations
+            # When it comes to mutations, we only need to mutate the counts for
+            # valid initial nodes.
+
+            if self.mutation_rate and len(data):
+                condition = self.final_node != -1
+                if prng is None:
+                    prng = self.prng
+
+                shape = (self.nInitial, self.nNodes, self.nSymbols)
+                counts = prng.binomial(len(data), self.mutation_rate, shape)
+                counts[:, ~self.tmatrix_bool] = 0
+                mutations = self.edge_counts[condition]
+                mutations += self.mutation_sign * counts * self._feedback_factor
+                if self.mutation_sign < 0:
+                    mutations[mutations < 0] = 0
+
+                self.edge_counts[condition] = mutations
 
         self._update_node_alphacounts()
         self.logevid_cache = {}
@@ -1256,7 +1291,10 @@ class Infer(object):
 
         """
         new = self.get_updated_prior()
+        new.posterior._count_method = 'simple'
+        new.posterior._feedback_factor = 1
         new.add_counts_from(x)
+
         return new.log_evidence(initial_node)
 
 class InferCP(Infer):

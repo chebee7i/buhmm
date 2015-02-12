@@ -393,7 +393,9 @@ class Infer(_dirichlet.Infer):
             self._inode_init(new)
             self._fnode_init()
 
-        self._nullcount_callback = nullcount_callback
+        # 2015-02-11: Disabling until we get a proper solution for missing data.
+        #self._nullcount_callback = nullcount_callback
+        self._nullcount_callback = None
 
 
 
@@ -512,10 +514,14 @@ class Infer(_dirichlet.Infer):
         Returns an optimized (Cython) Infer instance.
 
         """
-        return _dirichlet.Infer(self.posterior._dd.tmatrix,
-                                mutation_rate=self.posterior._dd.mutation_rate,
-                                prng=self.prng)
+        d = _dirichlet.Infer(self.posterior._dd.tmatrix,
+                             mutation_rate=self.posterior._dd.mutation_rate,
+                             prng=self.prng)
 
+        # Copy over feedback factor
+        d.posterior._count_method = self.posterior._dd._count_method
+        d.posterior._feedback_factor = self.posterior._dd._feedback_factor
+        return d
 
 class InferCP(Infer):
     _nodedist_class = dit.Distribution
