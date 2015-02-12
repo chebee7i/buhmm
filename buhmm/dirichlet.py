@@ -372,6 +372,48 @@ class Infer(_dirichlet.Infer):
         # Update the node counts.
         #self.posterior._update_node_alphacounts(alpha=False, counts=True)
 
+        def nullcount_callback(final_dist):
+            outcomes = self.posterior.nodes
+            n = self.posterior.nNodes
+            dists = {}
+            for i, initial_node in enumerate(outcomes):
+                if i in final_dist or 1:
+                    d = final_dist[i]
+                    pmf = [d[node] for node in range(n)]
+                    #if np.isclose(sum(pmf), 1.0):
+                    dists[initial_node] = self._nodedist_class(outcomes, pmf, sparse=False)
+
+            weights = [self.inode_posterior[node] for node in dists]
+            #assert(np.isclose(sum(weights), 1.0))
+            pmfs = dists.values()
+
+            new = dit.mixture_distribution2(pmfs, weights)
+            self.inode_prior = new
+            self.posterior._post_init(self.posterior)
+            self._inode_init(new)
+            self._fnode_init()
+
+        self._nullcount_callback = nullcount_callback
+
+
+
+    def add_complex_count(self, symbol, verify=False):
+        posterior = self.posterior
+
+        if symbol is None:
+            posterior._dd._add_nullcount(callback=self._nullcount_callback)
+            # Hack callback for updating prior should be called.
+        else:
+            data, data_symbols = standardize_data([symbol], self.symbols)
+            if verify:
+                if not set(data_symbols).issubset(set(posterior.symbols)):
+                    msg = "Data contains symbols not in the alphabet of the machine!\n"
+                    msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", posterior.symbols)
+                    msg += "\n\t {0: <18} {1}".format("Data Alphabet:", data_symbols)
+                    raise Exception(msg)
+
+            posterior._dd.add_counts_from(data)
+            posterior._post_init(posterior)
 
     # The following methods use the nodes to index into arrays. So we have
     # to redefine them to look up the node's index. They will not benefit

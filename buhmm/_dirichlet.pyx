@@ -56,6 +56,7 @@ from __future__ import division
 import cython
 cimport cython
 
+from collections import defaultdict
 from math import copysign
 
 import numpy as np
@@ -92,10 +93,10 @@ cdef _log_evidence(
         int nEdges, int nNodes,
         ITYPE_t[:] final_node,
         ITYPE_t[:, :] edges,
-        ITYPE_t[:, :, :] edge_alphas,
-        ITYPE_t[:, :, :] edge_counts,
-        ITYPE_t[:, :] node_alphas,
-        ITYPE_t[:, :] node_counts,
+        FTYPE_t[:, :, :] edge_alphas,
+        FTYPE_t[:, :, :] edge_counts,
+        FTYPE_t[:, :] node_alphas,
+        FTYPE_t[:, :] node_counts,
         # Using the NumPy declaration allows us to call NumPy functions on it.
         np.ndarray[FTYPE_t, ndim=2] temp):
         #FTYPE_t[:, :] temp):
@@ -199,6 +200,7 @@ class DirichletDistribution(object):
         #   nEdges   : number of edges
 
         self._count_method = 'simple'
+        self._nullcount_callback = None
 
         if prng is None:
             prng = np.random.RandomState()
@@ -261,7 +263,7 @@ class DirichletDistribution(object):
         # shape: (n, n, k)
         # axes: (initialNode, node, symbol)
         # Start with uniform prior.
-        self.edge_alphas = np.zeros(counts.shape, dtype=ITYPE) + 1
+        self.edge_alphas = np.zeros(counts.shape, dtype=FTYPE) + 1
 
         # Now add counts, and update various parts the class.
         self.add_counts_from(data, from_final=False)
@@ -322,6 +324,81 @@ class DirichletDistribution(object):
         if counts:
             self.node_counts = self.edge_counts.sum(axis=2)
 
+    def _add_nullcount(self, callback=None):
+        # Ultimately, this is probably the wrong approach. To do this properly,
+        # we need to track uncertainty in the current state for each initial
+        # node. This will allow us to have mixed states, and will properly
+        # handle missing data, or partial data, etc.
+
+
+        # 1. For each valid initial node, consider its final node.
+        #    Now, calculate the predictive probability of each
+        #    allowable symbol from that node.
+        # 2. Use the predictive distribution to update the counts
+        #    for each symbol, weighting each count by the
+        #    probability of seeing that symbol.
+        # 3. Then, for the Infer instance, we need a new prior.
+        #    This prior must be:
+        #       P(S_{t+1} | X_{0:t}=D, S_0 ~ p)
+        #        = \sum_s P(S_{t+1} | X_{0:t}=D, S_0=s) P(S_0=s)
+        #        = \sum_s \sum_x P(S_{t+1} | X_{0:t}=D, X_t=x, S_0=s) P(X_t=x | X_{0:t}=D, S_0=s) P(S_0=s)
+        #
+        #    where:
+        #       P(S_{t+1} | X_{0:t}=D, X_t=x, S_0=s)
+        #        = \int P(S_{t+1} | X_{0:t}=D, X_t=x, S_0=s, theta) P(theta | X_{0:t}=D, X_t=x, S_0=s) dtheta
+        #        = [S_{t_1} = \delta(s, Dx)]
+        #       P(X_t=x | X_{0:t}=D, S_0=s)
+        #        = \int P(S_{t+1} | X_{0:t}=D, X_t=x, S_0=s, theta) P(theta | X_{0:t}=D, X_t=x, S_0=s) dtheta
+        edge_counts = self.edge_counts.copy()
+        final_dist = {}
+        nonzero = {}
+        for initial_node in self.valid_initial_nodes:
+            current_node = self.final_node[initial_node]
+            ndist = defaultdict(float)
+
+            for symbol in self.symbols:
+                d = np.asarray([symbol])
+                logp = self.predictive_probability(d, current_node)
+                p = 2**logp
+                final_node = self.tmatrix[current_node, symbol]
+                if p > 0:
+                    ndist[final_node] += p
+                    nonzero[final_node] = True
+                edge_counts[initial_node, current_node, symbol] += p
+
+            final_dist[initial_node] = ndist
+
+        # Only add after all symbols have been considered from
+        # that each initial node, otherwise, pred probs will change.
+        self.edge_counts += edge_counts
+
+        # Valid initial nodes doesn't change, since we have no new data.
+        # Final node could change, but we only allow one final node
+        # per initial node. After seeing no symbol, we will
+        # generally be in a distribution over final nodes for each
+        # initial node. So for now, we don't update final nodes at all.
+        # This is strictly WRONG and the way we handle it is a hack.
+        # In the ideal case, we would continue with this uncertainty.
+        # So instead of adding a single count to any edge, we would
+        # add a count proportional PM probability of taking that edge,
+        # weighted according to the initial node uncertainty. Effectively,
+        # the 1 count would be shared amongst the entire edge_counts matrix,
+        # potentially every row, for each initial node.
+        #
+        # For now, we hack this by setting a completely new prior.
+        self.edge_alphas += self.edge_counts
+        self.edge_counts *= 0
+        self._update_node_alphacounts()
+        self.final = np.ones(self.nNodes, dtype=int) * -1
+        for final in nonzero:
+            # Mark it as a valid final node.
+            self.final[final] = final
+        condition = self.final_node != -1
+        self.valid_initial_nodes = np.array(np.nonzero(condition)[0])
+
+        if callback is not None:
+            callback(final_dist)
+
     def add_counts_from(self, data, from_final=True, prng=None):
         """
         Adds additional counts from `data`.
@@ -333,7 +410,6 @@ class DirichletDistribution(object):
         # from consideration. So we only continue to add counts for valid
         # initial nodes. You should not expect the counts for each initial
         # node to be the same.
-
 
         if self._count_method == 'simple':
             out_arrays = (self.edge_counts, self.final_node, self.node_paths)
@@ -347,6 +423,10 @@ class DirichletDistribution(object):
                 self.valid_initial_nodes = self.final_node.copy()
 
             for symbol in data:
+                if symbol is None:
+                    self._add_nullcount()
+                    continue
+
                 for initial_node in self.valid_initial_nodes:
                     final_node = self.final_node[initial_node]
                     self.final_node[initial_node] = self.tmatrix[final_node, symbol]

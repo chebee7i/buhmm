@@ -39,6 +39,9 @@ class TestSmoke:
         np.testing.assert_almost_equal(uhmm1, uhmm2)
 
     def test_predictive_probability(self):
+        base = 2
+        ops = dit.math.get_ops(base)
+
         m = machines.Even()
         d = '11111'
         x = buhmm.Infer(m, d)
@@ -47,21 +50,28 @@ class TestSmoke:
         fnode = m2A.graph['final_node']
         assert_equal(fnode, 'B')
         w = '0'
-        p2A = m2A.probability(w, start=fnode)
-        assert_almost_equal(p2A, x.predictive_probability(w, 'A'))
+        p2A0 = m2A.probability(w, start=fnode)
+        assert_almost_equal(p2A0, x.predictive_probability(w, 'A'))
         w = '1'
-        p2A = m2A.probability(w, start=fnode)
-        assert_almost_equal(p2A, x.predictive_probability(w, 'A'))
+        p2A1 = m2A.probability(w, start=fnode)
+        assert_almost_equal(p2A1, x.predictive_probability(w, 'A'))
+
+        z = ops.add(p2A0, p2A1)
+        assert_almost_equal(z, ops.one)
 
         m2B = x.pm_machine('B')
         fnode = m2B.graph['final_node']
         assert_equal(fnode, 'A')
         w = '0'
-        p2B = m2B.probability(w, start=fnode)
-        assert_almost_equal(p2B, x.predictive_probability(w, 'B'))
+        p2B0 = m2B.probability(w, start=fnode)
+        assert_almost_equal(p2B0, x.predictive_probability(w, 'B'))
         w = '1'
-        p2B = m2B.probability(w, start=fnode)
-        assert_almost_equal(p2B, x.predictive_probability(w, 'B'))
+        p2B1 = m2B.probability(w, start=fnode)
+        assert_almost_equal(p2B1, x.predictive_probability(w, 'B'))
+
+        z = ops.add(p2B0, p2B1)
+        assert_almost_equal(z, ops.one)
+
 
     def test_infer(self):
         m = machines.Even()

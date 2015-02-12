@@ -20,6 +20,10 @@ ctypedef bint BTYPE_t
 ITYPE = np.int64
 ctypedef np.int64_t ITYPE_t
 
+FTYPE = np.float64
+ctypedef np.float64_t FTYPE_t
+
+
 __all__ = ['out_arrays', 'path_counts']
 
 def out_arrays(n, k, L, node_path=False):
@@ -40,7 +44,7 @@ def out_arrays(n, k, L, node_path=False):
 
     Returns
     -------
-    counts : NumPy int array, shape (n, n, k)
+    counts : NumPy float array, shape (n, n, k)
         Array for the number of times each edge was traversed.
     final : NumPy int array, shape (n,)
         Array for the final node visitations.
@@ -48,7 +52,7 @@ def out_arrays(n, k, L, node_path=False):
         Array for node paths.
 
     """
-    counts = np.zeros((n,n,k), dtype=int)
+    counts = np.zeros((n,n,k), dtype=float)
     final = np.arange(n, dtype=int)
     node_paths = None
     if node_path:
@@ -98,7 +102,7 @@ def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
 
     Returns
     -------
-    counts : NumPy int array, shape (n, n, k)
+    counts : NumPy float array, shape (n, n, k)
         The number of times each edge was traversed. For both nonedges and
         edges not visited, the count will be zero. Thus, `counts` cannot and
         should not be used to determine the transition structure. First axis
@@ -124,7 +128,7 @@ def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
     """
     cdef:
         int initialNode, currentNode, symbol, i, n, k, L
-        np.ndarray[ITYPE_t, ndim=3, mode="c"] counts
+        np.ndarray[FTYPE_t, ndim=3, mode="c"] counts
         np.ndarray[ITYPE_t, ndim=1, mode="c"] final
         np.ndarray[ITYPE_t, ndim=2, mode="c"] node_paths
 
@@ -139,7 +143,7 @@ def path_counts(np.ndarray[ITYPE_t, ndim=2, mode="c"] tmatrix,
         final = out_arrays[1]
         node_paths = out_arrays[2]
     else:
-        counts = np.zeros((n,n,k), dtype=ITYPE)
+        counts = np.zeros((n,n,k), dtype=FTYPE)
         final = np.zeros(n, dtype=ITYPE)
         node_paths = None
         if node_path:
