@@ -17,7 +17,7 @@ funding sources, academic advisors, users, etc.
 
 Do you want to make your contribution known? If you have commit access, edit
 this file and add your name. If you do not have commit access, feel free to
-open a `ticket <https://github.com/chebee7i/buhmm/issues/new>`_ or get in
+open an `issue <https://github.com/chebee7i/buhmm/issues/new>`_ or get in
 contact with someone who does have commit access.
 
 A supplementary (but still incomplete) list of contributors is given by the
