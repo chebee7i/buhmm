@@ -67,7 +67,7 @@ from scipy.special import gammaln
 from copy import deepcopy
 
 from .counts import path_counts
-from .exceptions import InvalidInitialNode, buhmmException
+from .exceptions import InvalidInitialNode, InvalidTopology, buhmmException
 
 from itertools import product
 
@@ -884,7 +884,7 @@ class Infer(object):
         #
         if len(self.posterior.valid_initial_nodes) == 0:
             msg = 'This topology is not compatible with the data.'
-            raise dit.exceptions.InvalidTopology(msg)
+            raise InvalidTopology(msg)
 
         if inode_prior is None:
             outcomes = self.posterior.nodes
