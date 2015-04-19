@@ -4,6 +4,7 @@ class buhmmException(Exception):
     Base class for all `buhmm` exceptions.
 
     """
+    default_message = ''
     def __init__(self, *args, **kwargs):
         if 'msg' in kwargs:
             # Override the message in the first argument.
@@ -11,7 +12,7 @@ class buhmmException(Exception):
         elif args:
             self.msg = args[0]
         else:
-            self.msg = ''
+            self.msg = self.default_message
         self.args = args
         self.kwargs = kwargs
 
@@ -38,3 +39,9 @@ class InvalidNode(buhmmException):
         msg = "Invalid node: {0!r}".format(args[0])
         args = (msg,) + args
         buhmmException.__init__(self, *args, **kwargs)
+
+class UnexpectedSymbol(buhmmException):
+    pass
+
+class InvalidTopology(buhmmException):
+    pass

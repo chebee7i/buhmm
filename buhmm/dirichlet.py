@@ -90,7 +90,7 @@ class DirichletDistribution(object):
                 msg = "Data contains symbols not in the machine's alphabet!\n"
                 msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", symbols)
                 msg += "\n\t {0: <18} {1}".format("Data Alphabet:", seen)
-                raise Exception(msg)
+                raise dit.exceptions.UnexpectedSymbol(msg)
 
         data, _ = standardize_data(data, symbols)
 
@@ -165,7 +165,7 @@ class DirichletDistribution(object):
                 msg = "Data contains symbols not in the alphabet of the machine!\n"
                 msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", self.symbols)
                 msg += "\n\t {0: <18} {1}".format("Data Alphabet:", data_symbols)
-                raise Exception(msg)
+                raise dit.exceptions.UnexpectedSymbol(msg)
 
         self._dd.add_counts_from(data)
         self._post_init(self)
@@ -315,7 +315,7 @@ class DirichletDistributionCP(DirichletDistribution):
             msg = "Data contains symbols not in the alphabet of the machine!\n"
             msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", self.symbols)
             msg += "\n\t {0: <18} {1}".format("Data Alphabet:", data_symbols)
-            raise Exception(msg)
+            raise dit.exceptions.UnexpectedSymbol(msg)
 
         dd = _dirichlet.DirichletDistributionCP
         self._dd = dd(tmatrices, data, node_path, prng, out_arrays)
@@ -478,7 +478,10 @@ class ModelComparison(BaseModelComparison):
     log_evids = None
 
     def __init__(self, infers):
+        if len(infers) == 0:
+            raise dit.exceptions.ditException('No infers passed in.')
         self.infers = infers
+
 
         self.log_evids = np.array([infer.log_evidence() for infer in infers])
 

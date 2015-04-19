@@ -67,7 +67,7 @@ from scipy.special import gammaln
 from copy import deepcopy
 
 from .counts import path_counts
-from .exceptions import InvalidInitialNode
+from .exceptions import InvalidInitialNode, buhmmException
 
 from itertools import product
 
@@ -463,7 +463,7 @@ class DirichletDistribution(object):
 
         Raises
         ------
-        Exception
+        InvalidInitialNode
             If `initial_node` is not a valid initial node.
 
         Notes
@@ -769,7 +769,7 @@ class DirichletDistributionCP(DirichletDistribution):
 
         Raises
         ------
-        Exception
+        InvalidInitialNode
             If `initial_node` is not a valid initial node.
 
         Notes
@@ -810,7 +810,7 @@ class DirichletDistributionCP(DirichletDistribution):
 
         Raises
         ------
-        Exception
+        InvalidInitialNode
             If `initial_node` is not a valid initial node.
 
         Notes
@@ -882,6 +882,10 @@ class Infer(object):
         #
         # Set up initial node prior distribution.
         #
+        if len(self.posterior.valid_initial_nodes) == 0:
+            msg = 'This topology is not compatible with the data.'
+            raise dit.exceptions.InvalidTopology(msg)
+
         if inode_prior is None:
             outcomes = self.posterior.nodes
             n = self.posterior.nNodes
@@ -906,7 +910,7 @@ class Infer(object):
                     break
             else:
                 msg = "`inode_prior` does not assign probability to a valid node."
-                raise Exception(msg)
+                raise buhmmException(msg)
 
         # There is no reason to make it sparse, except to match the posterior.
         inode_prior.make_sparse()
@@ -1099,7 +1103,7 @@ class Infer(object):
 
         Raises
         ------
-        Exception
+        InvalidInitialNode
             If `initial_node` is not a valid initial node.
 
         """
