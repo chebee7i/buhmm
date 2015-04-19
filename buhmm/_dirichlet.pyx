@@ -853,7 +853,7 @@ class Infer(object):
     _symboldist_class = dit.ScalarDistribution
     _posterior_class = DirichletDistribution
 
-    def __init__(self, tmatrix, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None):
+    def __init__(self, tmatrix, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None, **kwargs):
         """
         inode_prior is the initial node prior distribution.
 
@@ -871,7 +871,7 @@ class Infer(object):
         self.prng = prng
 
         self.posterior = self._posterior_class(
-            tmatrix, data, node_path, self.prng, out_arrays
+            tmatrix, data, node_path, self.prng, out_arrays, **kwargs
         )
 
         self._inode_init(inode_prior)

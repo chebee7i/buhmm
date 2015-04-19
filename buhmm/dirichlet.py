@@ -13,7 +13,9 @@ from copy import deepcopy
 from itertools import product
 
 from . import _dirichlet
-from .exceptions import NonunifilarException, InvalidInitialNode, InvalidNode
+from .exceptions import (
+    NonunifilarException, InvalidInitialNode, InvalidNode, UnexpectedSymbol
+)
 from .canonical import tmatrix
 
 import cmpy
@@ -90,7 +92,7 @@ class DirichletDistribution(object):
                 msg = "Data contains symbols not in the machine's alphabet!\n"
                 msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", symbols)
                 msg += "\n\t {0: <18} {1}".format("Data Alphabet:", seen)
-                raise dit.exceptions.UnexpectedSymbol(msg)
+                raise UnexpectedSymbol(msg)
 
         data, _ = standardize_data(data, symbols)
 
@@ -165,7 +167,7 @@ class DirichletDistribution(object):
                 msg = "Data contains symbols not in the alphabet of the machine!\n"
                 msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", self.symbols)
                 msg += "\n\t {0: <18} {1}".format("Data Alphabet:", data_symbols)
-                raise dit.exceptions.UnexpectedSymbol(msg)
+                raise UnexpectedSymbol(msg)
 
         self._dd.add_counts_from(data)
         self._post_init(self)
@@ -315,7 +317,7 @@ class DirichletDistributionCP(DirichletDistribution):
             msg = "Data contains symbols not in the alphabet of the machine!\n"
             msg += "\n\t {0: <18} {1}".format("Machine Alphabet:", self.symbols)
             msg += "\n\t {0: <18} {1}".format("Data Alphabet:", data_symbols)
-            raise dit.exceptions.UnexpectedSymbol(msg)
+            raise UnexpectedSymbol(msg)
 
         dd = _dirichlet.DirichletDistributionCP
         self._dd = dd(tmatrices, data, node_path, prng, out_arrays)
@@ -346,7 +348,7 @@ class Infer(_dirichlet.Infer):
     """
     _posterior_class = DirichletDistribution
 
-    def __init__(self, machine, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None):
+    def __init__(self, machine, data=None, inode_prior=None, node_path=False, prng=None, out_arrays=None, options=None, **kwargs):
 
         if data is None:
             data = []
@@ -356,7 +358,7 @@ class Infer(_dirichlet.Infer):
             data = map(tuple, data)
 
         cls = super(Infer, self)
-        cls.__init__(machine, data, inode_prior, node_path, prng, out_arrays, options)
+        cls.__init__(machine, data, inode_prior, node_path, prng, out_arrays, options, **kwargs)
 
         # Update edge counts with typical counts.
 
