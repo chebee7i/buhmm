@@ -18,7 +18,7 @@ import numpy as np
 import dit
 
 from buhmm.exceptions import buhmmException, InvalidTopology, UnexpectedSymbol
-from buhmm.twosample import chisq_twosample, bayesian_twosample
+from buhmm.twosample import *
 
 
 class Counts(object):
@@ -340,6 +340,17 @@ def topology_identifier(delta, alphabet):
 
     return n, k, icdfa
 
+def machine_to_icdfa_unique(machine):
+    from cmpy.orderlygen import ICDFA
+
+    delta, nodes, alphabet = machine.delta_matrix()
+    n, k = len(nodes), len(alphabet)
+    icdfas = ICDFA.icdfas_from_delta(delta.ravel(), n, k)
+    icdfas = sorted(icdfas.tolist())
+    # Use the first one as canonical.
+    icdfa = tuple(icdfas[0])
+    return n, k, icdfa
+
 def generate_history_topologies(counts, hLength, equal_func):
     """
     Do not set hLength at the point when you don't think you will have good
@@ -378,6 +389,7 @@ def find_topologies(data, hLength, fLength):
         infnorm_equal(.1),
         bv_nonextreme_equal(.1),
         bv_nonextreme_equal(.2),
+        bv_nonextreme_equal(.3),
     ]
 
     counts = Counts(data, hLength, fLength)
@@ -386,6 +398,14 @@ def find_topologies(data, hLength, fLength):
         print "Equal func idx: {}".format(idx)
         tops = generate_history_topologies(counts, hLength, equal_func)
         all_tops.update(set(tops.values()))
+
+    # Add Markov skeletons up to R=5.
+    # To infer Markov skeletons with R >= 5 requires >> 1e6 data points.
+    from cmpy.machines import markov_skeleton
+    k = len(counts.alphabet)
+    markovs = [( k**R, k, tuple(np.asarray(k * [range(k**R)]).ravel()) )
+                for R in range(6)]
+    all_tops.update(markovs)
 
     return all_tops, counts
 
@@ -419,11 +439,11 @@ def infer(data, hLength, fLength):
     if len(infers) == 0:
         raise buhmmException("Could not find any valid topologies.")
 
-    msg = "Found {} topologies, of which {} were valid."
+    msg = "Inferring from {} topologies, of which {} were valid."
     msg = msg.format(len(machs), len(infers))
     print(msg)
     mc = buhmm.ModelComparison(infers)
-    return mc, counts
+    return mc, counts, tops
 
 def main1():
     from cmpy import machines
@@ -434,7 +454,7 @@ def main1():
     hLength = 5
     fLength = 2
 
-    all_tops = find_topologies(d, hLength, fLength)
+    all_tops, counts = find_topologies(d, hLength, fLength)
 
     icdfa = tuple(sorted(ICDFA.machine_to_icdfas_iter(m))[0])
 
