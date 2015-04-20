@@ -7,7 +7,11 @@ from __future__ import division
 import numpy as np
 import scipy.stats as stats
 
-__all__ = ['chisq_twosample', 'bayesian_twosample']
+__all__ = [
+    'chisq_twosample',
+    'bayesian_twosample',
+    'bv_nonextreme_twosample',
+]
 
 def chisq_twosample(countsX, countsY, alpha):
     """
@@ -38,7 +42,9 @@ def chisq_twosample(countsX, countsY, alpha):
     Examples
     --------
     >>> chisq_twosample([1,10], [2,3], .05)
-    (True, 0.001810378907923349)
+    (False, 0.34032457722408593)
+    >>> chisq_twosample([1,30], [20,30], .05)
+    (True, 0.001185539179966888)
 
     References
     ----------
@@ -118,8 +124,10 @@ def bayesian_twosample(countsX, countsY, prior=None):
 
     Examples
     --------
-    >>> chisq_twosample([1,10], [2,3], .05)
-    (True, 3.3180319059501269)
+    >>> bayesian_twosample([1,10], [2,3])
+    (True, 0.11798407303051839)
+    >>> bayesian_twosample([1,30], [20,30])
+    (True, 9.4347501426274931)
 
     References
     ----------
@@ -155,3 +163,51 @@ def log_evidence(counts, prior):
          + gammaln(prior.sum()) - gammaln(prior).sum()
 
     return evid / log(2)
+
+def bv_nonextreme_twosample(countsX, countsY, tol):
+    """
+    Returns the nonextreme Z statistic of Bhattacharya and Valiant [1]_.
+
+    Parameters
+    ----------
+    countsX : array-like
+        The counts for X.
+    countsY : array-like
+        The counts for Y.
+    tol : float
+        The tolerance level for determining when to reject the null hypothesis.
+        Choosing a value for the tolerance can be difficult, but generally
+        values of Z greater than 0.1 or 0.2 seem to correlate with the
+        chisquared two-sample and Bayesian two-sample tests give.
+
+    Returns
+    -------
+    reject : bool
+        If `True`, then the null hypothesis is rejected if the calculate Z
+        value is greater than tol, and so the counts should be considered as
+        generated from different distributions.
+    Z : float
+        The calculated Z-statistic.
+
+    Examples
+    --------
+    >>> bv_nonextreme_twosample([1,10], [2,3], .05)
+    (False, -0.096427404373121611)
+    >>> bv_nonextreme_twosample([1,30], [20,30], .05)
+    (True, 2.0998342829538652)
+
+    References
+    ----------
+    .. [1] http://arxiv.org/abs/1504.04599
+
+    """
+    countsX = np.asarray(countsX)
+    countsY = np.asarray(countsY)
+
+    m1 = countsX.sum()
+    m2 = countsY.sum()
+    num = (m2 * countsX- m1 * countsY)**2 - (m2**2 * countsX + m1**2 * countsY)
+    den = m1**(3/2) * m2 * (countsX + countsY)
+    Z = (num / den).sum()
+    reject = Z > tol
+    return reject, Z
