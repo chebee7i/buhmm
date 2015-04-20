@@ -479,20 +479,30 @@ class ModelComparison(BaseModelComparison):
     """
     log_evids = None
 
-    def __init__(self, infers):
+    def __init__(self, infers, beta=0, penalty=None):
         if len(infers) == 0:
             raise dit.exceptions.ditException('No infers passed in.')
         self.infers = infers
 
+        if penalty == 'node':
+            penalty = lambda d: d.nNodes
+        elif penalty == 'edge':
+            penalty = lambda d: d.nEdges
+        elif penalty is None:
+            penalty = lambda d: 0
 
         self.log_evids = np.array([infer.log_evidence() for infer in infers])
 
         base = 2
         ops = dit.math.get_ops(base)
 
-        logevid = ops.add_reduce(self.log_evids)
+        self.beta = beta
+        penalties = np.array([penalty(infer.posterior) for infer in infers])
+        self.penalized = self.log_evids - beta * penalties
+
+        logevid = ops.add_reduce(self.penalized)
         norm = ops.invert(logevid)
-        pmf = np.array([ops.mult(evid, norm) for evid in self.log_evids])
+        pmf = np.array([ops.mult(evid, norm) for evid in self.penalized])
         d = dit.ScalarDistribution(pmf, base=base)
         d.set_base('linear') # Is this wise?
         self.model_dist = d

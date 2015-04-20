@@ -447,7 +447,7 @@ def rrx_example():
     d = m0.symbols(1e6)
     infers = [buhmm.Infer(m, d) for m in [m0, m1, m2, m3, m4]]
     mc = buhmm.ModelComparison(infers)
-    return mc
+    return mc, infers
 
 if __name__ == '__main__':
     pass
