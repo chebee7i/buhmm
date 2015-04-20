@@ -151,6 +151,13 @@ def bayesian_equal(prior=None):
         return equal
     return func
 
+def bv_nonextreme_equal(tol):
+    def func(countsX, countsY):
+        reject, Z = bv_nonextreme_twosample(countsX, countsY, tol)
+        equal = not reject
+        return equal
+    return func
+
 def bool_equal(countsX, countsY):
     """
     Returns True if the locations of nonzero counts are identical.
@@ -369,6 +376,8 @@ def find_topologies(data, hLength, fLength):
         infnorm_equal(.3),
         infnorm_equal(.2),
         infnorm_equal(.1),
+        bv_nonextreme_equal(.1),
+        bv_nonextreme_equal(.2),
     ]
 
     counts = Counts(data, hLength, fLength)
@@ -390,7 +399,9 @@ def infer(data, hLength, fLength):
     tops, counts = find_topologies(data, hLength, fLength)
     tops = sorted(tops)
 
-    machs = [ICDFA.icdfa_to_machine(delta, n, k) for (n, k, delta) in tops]
+    machs = [ICDFA.icdfa_to_machine(delta, n, k,
+                                    alphabet=counts.alphabet, maxent=False)
+             for (n, k, delta) in tops]
 
     import buhmm
     infers = []
@@ -400,6 +411,9 @@ def infer(data, hLength, fLength):
         except InvalidTopology:
             # The alphabet matches, but the topology is compatible.
             pass
+        except:
+            print m.to_string()
+            raise
         else:
             infers.append(infer)
     if len(infers) == 0:
