@@ -323,7 +323,10 @@ class DirichletDistribution(object):
                 final_node = self.final_node[initial_node]
                 self.final_node[initial_node] = self.tmatrix[final_node, symbol]
                 self.edge_counts[initial_node, final_node, symbol] += 1
-                self.valid_initial_nodes = np.array(np.nonzero(self.final_node != -1)[0])
+
+            self.valid_initial_nodes = np.array(np.nonzero(self.final_node != -1)[0])
+            if len(self.valid_initial_nodes) == 0:
+                break
 
         self._update_node_alphacounts()
         self.logevid_cache = {}
