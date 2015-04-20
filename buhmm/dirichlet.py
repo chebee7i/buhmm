@@ -502,7 +502,7 @@ class ModelComparison(BaseModelComparison):
 
         logevid = ops.add_reduce(self.penalized)
         norm = ops.invert(logevid)
-        pmf = np.array([ops.mult(evid, norm) for evid in self.penalized])
+        pmf = ops.mult(self.penalized, norm)
         d = dit.ScalarDistribution(pmf, base=base)
         d.set_base('linear') # Is this wise?
         self.model_dist = d
